@@ -1,0 +1,19 @@
+# Edooka project conventions
+
+## Stack
+- Next.js App Router, TypeScript strict, Tailwind v4
+- Drizzle ORM with PostgreSQL (Supabase)
+- @react-pdf/renderer for PDFs
+- Resend for email
+- Cashfree for payments
+
+## Security
+- Never expose service role key to client components
+- Verify all webhook signatures server-side
+- Keep payment logic only in API routes or server actions
+
+## Business rules
+- Pass threshold is 50% (9 out of 18)
+- Pass screen: show "You qualified", no percentage
+- Fail screen: show raw count only, no percentage
+- Retry lock: 24 hours on failed attempts
