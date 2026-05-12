@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { programs } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Page: ProgramDetail
  * Purpose: Displays details for one program by slug.

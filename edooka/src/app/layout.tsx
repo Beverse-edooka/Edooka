@@ -21,8 +21,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
-      <body className={`${inter.className} min-h-full bg-background text-text-primary`}>
-        <div className="mx-auto flex min-h-screen max-w-[1080px] flex-col px-4 md:px-6">
+      <body
+        className={`${inter.className} min-h-screen w-full bg-background text-text-primary antialiased`}
+      >
+        <div className="flex min-h-screen w-full flex-col px-4 md:px-8 lg:px-12">
           <Nav />
           <main className="flex-1 py-8">{children}</main>
           <Footer />
