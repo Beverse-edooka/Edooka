@@ -1,70 +1,310 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { getProgramBySlug } from "@/data/programs";
+import { normalizeLearnerAttempt } from "@/lib/learner";
+import { PRICING_TIERS } from "@/lib/pricing";
+import { EDOOKA_ATTEMPT_KEY, persistLearnerProfile, readLearnerProfile, type ActiveAttempt } from "@/lib/session-keys";
+
+const RETRY_HOURS = 24;
+const STORAGE_KEY = "edookaLastAttempt";
+
+function Confetti() {
+  const particles = Array.from({ length: 40 }, (_, i) => i);
+  return (
+    <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
+      {particles.map((i) => {
+        const x = Math.random() * 100;
+        const delay = Math.random() * 0.8;
+        const dur = 1.8 + Math.random() * 1.2;
+        const color = ["#ff6b35", "#ffd700", "#4ade80", "#60a5fa", "#f472b6"][i % 5];
+        return (
+          <motion.div
+            key={i}
+            initial={{ y: -20, x: `${x}vw`, opacity: 1, rotate: 0 }}
+            animate={{ y: "110vh", opacity: 0, rotate: 720 }}
+            transition={{ duration: dur, delay, ease: "easeIn" }}
+            style={{
+              position: "absolute",
+              top: 0,
+              width: 10,
+              height: 10,
+              borderRadius: 2,
+              background: color,
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 /**
  * Page: Result
- * Purpose: Shows pass/fail with social sharing and certificate unlock options.
+ * Purpose: Pass/fail outcome, qualification messaging, and bundle selection toward checkout.
  */
 export default function ResultPage() {
   const params = useParams<{ attemptId: string }>();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const score = Number(searchParams.get("score") ?? 0);
   const total = Number(searchParams.get("total") ?? 18);
+  const slug = searchParams.get("slug") ?? "";
+
   const passed = score >= 9;
 
-  const shareText = useMemo(
-    () => encodeURIComponent("I completed an Edooka assessment. Check this platform: https://edooka.in"),
-    [],
+  const [attempt, setAttempt] = useState<ActiveAttempt | null>(null);
+  const [showConfetti, setShowConfetti] = useState(passed);
+  const [retryInfo, setRetryInfo] = useState<{ canRetry: boolean; hoursLeft: number }>({
+    canRetry: true,
+    hoursLeft: 0,
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("edooka_last_result_path", `${pathname}?${searchParams.toString()}`);
+  }, [pathname, searchParams]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let next: ActiveAttempt | null = null;
+    const raw = sessionStorage.getItem(EDOOKA_ATTEMPT_KEY);
+    if (raw) {
+      try {
+        const data = normalizeLearnerAttempt(JSON.parse(raw) as ActiveAttempt);
+        if (data.attemptId === params.attemptId) next = data;
+      } catch {
+        /* ignore */
+      }
+    }
+    if (!next) {
+      const fromDisk = readLearnerProfile(params.attemptId);
+      if (fromDisk) next = normalizeLearnerAttempt(fromDisk);
+    }
+    if (next) {
+      setAttempt(next);
+      persistLearnerProfile(next);
+    }
+  }, [params.attemptId]);
+
+  useEffect(() => {
+    if (!passed) return;
+    const raw = sessionStorage.getItem(EDOOKA_ATTEMPT_KEY);
+    if (!raw) return;
+    try {
+      const data = normalizeLearnerAttempt(JSON.parse(raw) as ActiveAttempt);
+      if (data.attemptId !== params.attemptId) return;
+      const merged: ActiveAttempt = {
+        ...data,
+        examPassed: true,
+        examScore: score,
+        examTotal: total,
+        examCompletedAt: Date.now(),
+      };
+      sessionStorage.setItem(EDOOKA_ATTEMPT_KEY, JSON.stringify(merged));
+      persistLearnerProfile(merged);
+      setAttempt(merged);
+    } catch {
+      /* ignore */
+    }
+  }, [passed, params.attemptId, score, total]);
+
+  const program = useMemo(() => (slug ? getProgramBySlug(slug) : undefined), [slug]);
+
+  const courseTitle = program?.title ?? attempt?.programTitle ?? "your program";
+
+  useEffect(() => {
+    if (!passed) return;
+    const t = setTimeout(() => setShowConfetti(false), 3500);
+    return () => clearTimeout(t);
+  }, [passed]);
+
+  useEffect(() => {
+    if (passed) return;
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEY, String(Date.now()));
+      setRetryInfo({ canRetry: false, hoursLeft: RETRY_HOURS });
+      return;
+    }
+    const ts = Number(raw);
+    const elapsed = (Date.now() - ts) / 36e5;
+    if (elapsed >= RETRY_HOURS) {
+      localStorage.removeItem(STORAGE_KEY);
+      setRetryInfo({ canRetry: true, hoursLeft: 0 });
+    } else {
+      setRetryInfo({ canRetry: false, hoursLeft: Math.ceil(RETRY_HOURS - elapsed) });
+    }
+  }, [passed]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const referredBy = localStorage.getItem("edookaReferredBy");
+    const hasAwarded = localStorage.getItem("edookaReferralAwarded");
+    if (referredBy && !hasAwarded) {
+      localStorage.setItem("edookaReferralAwarded", "true");
+      const referrerCoinKey = `edookaCoins_${referredBy}`;
+      const currentCoins = Number(localStorage.getItem(referrerCoinKey) ?? 0);
+      localStorage.setItem(referrerCoinKey, String(currentCoins + 1));
+    }
+  }, []);
+
+  const displayName = attempt?.name ?? "Your name";
+  const shareText = encodeURIComponent(
+    "I completed an Edooka healthcare assessment! https://edooka.in"
   );
 
   return (
-    <section className="mx-auto max-w-3xl space-y-6 rounded-2xl border border-border-default bg-white p-6 shadow-[0_12px_26px_rgba(255,149,88,0.24)]">
-      {passed ? (
-        <div className="space-y-4">
-          <div className="rounded-2xl bg-gradient-to-r from-primary to-primary-light p-6 text-white">
-            <p className="text-sm uppercase tracking-[0.16em]">Congratulations</p>
-            <h1 className="mt-2 text-3xl font-extrabold">You qualified!</h1>
-            <p className="mt-2">
-              Great work. You scored {score} out of {total}. You are now eligible for certificate unlock.
+    <>
+      <AnimatePresence>{showConfetti && <Confetti />}</AnimatePresence>
+
+      <section className="mx-auto max-w-3xl space-y-8 rounded-2xl border border-border-default bg-white p-6 shadow-[0_12px_26px_rgba(255,149,88,0.24)]">
+        {passed ? (
+          <div className="space-y-8">
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 18 }}
+              className="rounded-2xl bg-gradient-to-r from-primary to-primary-light p-6 text-white text-center space-y-2"
+            >
+              <motion.p
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.15 }}
+                className="text-3xl"
+              >
+                🎉
+              </motion.p>
+              <p className="text-sm uppercase tracking-widest font-semibold opacity-80">Congratulations</p>
+              <h1 className="text-3xl font-extrabold">You qualified!</h1>
+              <p className="opacity-90">
+                You scored <strong>{score}</strong> out of <strong>{total}</strong> in <strong>{courseTitle}</strong>.
+                Unlock your verifiable certificate below.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="relative overflow-hidden rounded-2xl border-2 border-dashed border-primary/30 bg-soft-orange p-8 text-center"
+            >
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-2xl backdrop-blur-[2px] bg-white/35">
+                <span className="text-4xl">🔒</span>
+                <p className="mt-2 font-bold text-foreground">Certificate locked</p>
+                <p className="text-sm text-text-muted mt-1">Pay once to unlock · PDF emailed automatically</p>
+              </div>
+
+              <div className="blur-[2px] opacity-90">
+                <p className="text-xs uppercase tracking-widest text-primary font-semibold">
+                  Certificate of achievement
+                </p>
+                <p className="mt-3 text-sm text-text-muted">This is to certify that</p>
+                <p className="mt-1 text-2xl font-extrabold text-foreground">{displayName}</p>
+                <p className="mt-3 text-sm text-text-secondary">
+                  has successfully completed the assessment in{" "}
+                  <span className="font-bold text-foreground">{courseTitle}</span>
+                </p>
+              </div>
+            </motion.div>
+
+            <div className="space-y-4">
+              <div className="text-center space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Choose a package</p>
+                <h2 className="text-2xl font-extrabold">Same pricing · unlock your credential</h2>
+                <p className="text-sm text-text-muted">Secure checkout via Cashfree when configured.</p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3 items-start">
+                {PRICING_TIERS.map((plan) => (
+                  <motion.article
+                    key={plan.key}
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    whileHover={{ y: -4, boxShadow: "0 16px 32px rgba(255,107,53,0.18)" }}
+                    className={`relative rounded-2xl bg-white p-5 text-center shadow-sm border ${
+                      plan.popular ? "border-2 border-primary" : "border-border-default"
+                    }`}
+                  >
+                    {plan.popular && (
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-bold text-white">
+                        MOST POPULAR
+                      </span>
+                    )}
+                    <p className="text-xs font-bold uppercase tracking-widest text-text-muted mt-2">{plan.tier}</p>
+                    <p className="mt-2 text-4xl font-extrabold text-foreground">{plan.priceDisplay}</p>
+                    {plan.sub ? <p className="mt-1 text-sm text-text-muted">{plan.sub}</p> : null}
+                    {plan.save ? (
+                      <span className="mt-2 inline-block rounded-full bg-soft-orange px-3 py-0.5 text-xs font-bold text-primary">
+                        {plan.save}
+                      </span>
+                    ) : null}
+                    <p className="mt-2 text-xs text-text-secondary">{plan.note}</p>
+                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="mt-4">
+                      <Link
+                        href={`/checkout/${params.attemptId}?bundle=${plan.key}`}
+                        className="block w-full rounded-lg border-2 border-foreground py-2.5 text-sm font-bold transition hover:bg-foreground hover:text-white"
+                      >
+                        {plan.cta}
+                      </Link>
+                    </motion.div>
+                  </motion.article>
+                ))}
+              </div>
+
+              <div className="flex items-start gap-3 rounded-xl border border-border-default bg-soft-orange px-5 py-3 text-xs text-text-muted">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0">
+                  <path
+                    d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                    stroke="#ff6b35"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Secure payment via Cashfree · UPI · Cards · Net Banking · Wallets. GST invoice from Edooka.
+              </div>
+            </div>
+          </div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4 text-center py-4"
+          >
+            <p className="text-5xl">😔</p>
+            <h1 className="text-3xl font-extrabold">Almost there!</h1>
+            <p className="text-lg text-text-secondary">
+              You got <span className="font-bold text-primary">{score}</span> of{" "}
+              <span className="font-bold">{total}</span> correct. You need{" "}
+              <strong>9 or more</strong> to qualify.
             </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <a
-              className="rounded-xl border border-border-default px-4 py-2 font-semibold card-hover"
-              target="_blank"
-              rel="noreferrer"
-              href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent("https://edooka.in")}`}
-            >
-              Share on LinkedIn
-            </a>
-            <a
-              className="rounded-xl border border-border-default px-4 py-2 font-semibold card-hover"
-              target="_blank"
-              rel="noreferrer"
-              href={`https://wa.me/?text=${shareText}`}
-            >
-              Share on WhatsApp
-            </a>
-            <Link href={`/checkout/${params.attemptId}`} className="rounded-xl bg-primary px-4 py-2 font-semibold text-white">
-              Download certificate
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <h1 className="text-3xl font-extrabold">Almost there</h1>
-          <p className="text-lg">
-            You got <span className="font-bold text-primary">{score}</span> of {total} correct.
-            You need 9 or more to qualify.
-          </p>
-          <Link href="/quiz/general" className="inline-flex rounded-xl bg-primary px-4 py-2 font-semibold text-white">
-            Try again with shuffled questions
-          </Link>
-        </div>
-      )}
-    </section>
+
+            {retryInfo.canRetry ? (
+              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                <Link
+                  href={slug ? `/start/${slug}` : "/#assessments"}
+                  className="inline-flex rounded-xl bg-primary px-6 py-2.5 font-semibold text-white hover:bg-primary-hover transition-colors"
+                >
+                  Try again →
+                </Link>
+              </motion.div>
+            ) : (
+              <div className="rounded-2xl border border-border-default bg-soft-orange p-5 space-y-2">
+                <p className="text-2xl">⏳</p>
+                <p className="font-bold text-foreground">
+                  Reattempt available in {retryInfo.hoursLeft} hour{retryInfo.hoursLeft !== 1 ? "s" : ""}
+                </p>
+                <p className="text-sm text-text-muted">
+                  To maintain assessment integrity, retakes are allowed only after 24 hours.
+                </p>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </section>
+    </>
   );
 }

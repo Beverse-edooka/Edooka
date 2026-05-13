@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
 
 /**
  * Page: AdminDashboard
@@ -7,7 +8,10 @@ import Link from "next/link";
 export default function AdminPage() {
   return (
     <section className="space-y-4">
-      <h1 className="text-2xl font-bold">Admin dashboard</h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold">Admin dashboard</h1>
+        <AdminLogoutButton />
+      </div>
       <p className="text-text-secondary">Manage questions and libraries from these modules.</p>
       <div className="flex gap-3">
         <Link href="/admin/questions" className="rounded-xl bg-primary px-4 py-2 font-semibold text-white">

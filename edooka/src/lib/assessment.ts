@@ -19,7 +19,7 @@ export function buildQuestionPool(): AssessmentQuestion[] {
     const correctIndex = i % 4;
     return {
       id,
-      questionText: `Question ${i + 1}: Which action best improves process quality in a professional workflow?`,
+      questionText: `Which action best improves process quality in a professional workflow?`,
       options: [
         `Option A for question ${i + 1}`,
         `Option B for question ${i + 1}`,
