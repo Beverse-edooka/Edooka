@@ -1,28 +1,51 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { buildQuestionPool, selectAttemptQuestions } from "@/lib/assessment";
+import type { AssessmentQuestion } from "@/lib/assessment";
 import { getProgramBySlug } from "@/data/programs";
 import { normalizeLearnerAttempt } from "@/lib/learner";
 import { EDOOKA_ATTEMPT_KEY, persistLearnerProfile, type ActiveAttempt } from "@/lib/session-keys";
 
 const QUESTION_TIME_LIMIT = 60;
 
+type QuizProgramPayload = {
+  slug: string;
+  title: string;
+  category: string;
+  numQuestions: number;
+  passThreshold: number;
+};
+
+type QuizApiOk = {
+  program: QuizProgramPayload;
+  questions: AssessmentQuestion[];
+};
+
+type QuizApiErr = {
+  error: string;
+  program?: { slug: string; title: string; category: string };
+};
+
 /**
  * Page: Quiz
- * Purpose: Timed assessment; requires completed lead form on /start/[slug].
+ * Purpose: Timed assessment from admin-authored DB questions; requires /start/[slug].
  */
 export default function QuizPage() {
   const router = useRouter();
   const params = useParams<{ slug: string }>();
   const slug = params.slug ?? "general";
-  const program = useMemo(() => getProgramBySlug(slug), [slug]);
+  const staticProgram = getProgramBySlug(slug);
 
-  const questions = useMemo(() => selectAttemptQuestions(buildQuestionPool(), 18), []);
   const [attempt, setAttempt] = useState<ActiveAttempt | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
+
+  const [questions, setQuestions] = useState<AssessmentQuestion[]>([]);
+  const [quizProgram, setQuizProgram] = useState<QuizProgramPayload | null>(null);
+  const [quizLoading, setQuizLoading] = useState(true);
+  const [quizLoadError, setQuizLoadError] = useState<string | null>(null);
+  const [quizErrProgram, setQuizErrProgram] = useState<QuizApiErr["program"] | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -51,6 +74,41 @@ export default function QuizPage() {
     router.replace(`/start/${slug}`);
   }, [bootError, router, slug]);
 
+  useEffect(() => {
+    if (!slug) return;
+    let cancelled = false;
+    (async () => {
+      setQuizLoading(true);
+      setQuizLoadError(null);
+      setQuizErrProgram(null);
+      try {
+        const r = await fetch(`/api/quiz/questions?slug=${encodeURIComponent(slug)}`);
+        const data = (await r.json()) as QuizApiOk & QuizApiErr;
+        if (cancelled) return;
+        if (!r.ok) {
+          setQuizLoadError(data.error ?? "load_failed");
+          setQuizErrProgram("program" in data && data.program ? data.program : null);
+          setQuestions([]);
+          setQuizProgram(null);
+          return;
+        }
+        setQuestions(data.questions ?? []);
+        setQuizProgram(data.program ?? null);
+      } catch {
+        if (!cancelled) {
+          setQuizLoadError("load_failed");
+          setQuestions([]);
+          setQuizProgram(null);
+        }
+      } finally {
+        if (!cancelled) setQuizLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
   const attemptId = attempt?.attemptId ?? "";
 
   const [index, setIndex] = useState(0);
@@ -59,14 +117,15 @@ export default function QuizPage() {
   const [answered, setAnswered] = useState(false);
 
   const current = questions[index];
-  const progress = ((index + 1) / questions.length) * 100;
+  const progress = questions.length > 0 ? ((index + 1) / questions.length) * 100 : 0;
 
   const moveNext = useCallback(
     (currentScore: number) => {
+      const passThreshold = quizProgram?.passThreshold ?? 50;
       const isLast = index === questions.length - 1;
       if (isLast) {
         router.push(
-          `/result/${attemptId}?score=${currentScore}&total=${questions.length}&slug=${encodeURIComponent(slug)}`
+          `/result/${attemptId}?score=${currentScore}&total=${questions.length}&slug=${encodeURIComponent(slug)}&passThreshold=${passThreshold}`
         );
         return;
       }
@@ -74,7 +133,7 @@ export default function QuizPage() {
       setTimeLeft(QUESTION_TIME_LIMIT);
       setAnswered(false);
     },
-    [index, questions.length, attemptId, router, slug]
+    [index, questions.length, attemptId, router, slug, quizProgram?.passThreshold]
   );
 
   useEffect(() => {
@@ -113,7 +172,7 @@ export default function QuizPage() {
     );
   }
 
-  if (!attempt || !current) {
+  if (!attempt) {
     return (
       <section className="mx-auto max-w-3xl rounded-2xl border border-border-default bg-white p-8 text-center">
         <p className="text-text-muted">Loading assessment…</p>
@@ -121,10 +180,47 @@ export default function QuizPage() {
     );
   }
 
-  if (!program) {
+  if (quizLoading) {
+    return (
+      <section className="mx-auto max-w-3xl rounded-2xl border border-border-default bg-white p-8 text-center">
+        <p className="text-text-muted">Loading exam questions…</p>
+      </section>
+    );
+  }
+
+  if (quizLoadError) {
+    const title =
+      quizErrProgram?.title ?? staticProgram?.title ?? "This assessment";
+    return (
+      <section className="mx-auto max-w-lg space-y-4 rounded-2xl border border-border-default bg-white p-8 text-center shadow-sm">
+        <h1 className="text-xl font-bold">
+          {quizLoadError === "no_questions" ? "Questions not ready yet" : "Assessment unavailable"}
+        </h1>
+        <p className="text-text-secondary">
+          {quizLoadError === "no_questions" && (
+            <>
+              {title} does not have published exam questions yet. Add questions in Admin, then try again.
+            </>
+          )}
+          {quizLoadError === "program_not_found" && (
+            <>This program is not available in the exam catalog. Check the link or return to assessments.</>
+          )}
+          {(quizLoadError === "load_failed" || quizLoadError === "slug_required") && (
+            <>Could not load exam questions. Check your connection and database configuration, then try again.</>
+          )}
+        </p>
+        <Link href="/#assessments" className="inline-block font-semibold text-primary">
+          ← Back to assessments
+        </Link>
+      </section>
+    );
+  }
+
+  if (!quizProgram || questions.length === 0 || !current) {
     return (
       <section className="mx-auto max-w-lg rounded-2xl border border-border-default bg-white p-8 text-center space-y-4">
-        <h1 className="text-xl font-bold">Program not found</h1>
+        <h1 className="text-xl font-bold">Could not start exam</h1>
+        <p className="text-text-secondary text-sm">No questions were returned for this program.</p>
         <Link href="/#assessments" className="font-semibold text-primary">
           ← Assessments
         </Link>
@@ -136,8 +232,8 @@ export default function QuizPage() {
     <section className="mx-auto max-w-3xl space-y-6 rounded-2xl border border-border-default bg-white p-6 shadow-[0_10px_28px_rgba(255,149,88,0.22)]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">{program.title}</p>
-          <p className="text-xs text-text-muted capitalize">{program.category}</p>
+          <p className="text-sm font-semibold text-foreground">{quizProgram.title}</p>
+          <p className="text-xs text-text-muted capitalize">{quizProgram.category}</p>
         </div>
 
         <div className="flex shrink-0 items-center justify-end gap-5 sm:gap-6">
@@ -195,7 +291,7 @@ export default function QuizPage() {
       <div className="grid gap-3">
         {current.options.map((option, optionIndex) => (
           <button
-            key={option}
+            key={`${current.id}-${optionIndex}`}
             type="button"
             onClick={() => handleAnswer(optionIndex)}
             disabled={answered}

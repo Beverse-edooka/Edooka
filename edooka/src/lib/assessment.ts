@@ -10,8 +10,7 @@ export interface AssessmentQuestion {
 }
 
 /**
- * Creates a deterministic pool of 120 sample questions.
- * This simulates a 100+ question bank for demo and development.
+ * Demo-only pool (not used by the live quiz; exams load from Postgres via `/api/quiz/questions`).
  */
 export function buildQuestionPool(): AssessmentQuestion[] {
   return Array.from({ length: 120 }, (_, i) => {

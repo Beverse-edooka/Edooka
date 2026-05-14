@@ -53,8 +53,12 @@ export default function ResultPage() {
   const score = Number(searchParams.get("score") ?? 0);
   const total = Number(searchParams.get("total") ?? 18);
   const slug = searchParams.get("slug") ?? "";
+  const passThresholdRaw = Number(searchParams.get("passThreshold") ?? 50);
+  const passThreshold = Number.isFinite(passThresholdRaw)
+    ? Math.min(100, Math.max(0, passThresholdRaw))
+    : 50;
 
-  const passed = score >= 9;
+  const passed = total > 0 && score * 100 >= total * passThreshold;
 
   const [attempt, setAttempt] = useState<ActiveAttempt | null>(null);
   const [showConfetti, setShowConfetti] = useState(passed);
@@ -217,7 +221,7 @@ export default function ResultPage() {
                 <p className="text-sm text-text-muted">Secure checkout via Cashfree when configured.</p>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3 items-start">
+              <div className="grid gap-4 md:grid-cols-3 md:items-stretch">
                 {PRICING_TIERS.map((plan) => (
                   <motion.article
                     key={plan.key}
@@ -225,25 +229,33 @@ export default function ResultPage() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     whileHover={{ y: -4, boxShadow: "0 16px 32px rgba(255,107,53,0.18)" }}
-                    className={`relative rounded-2xl bg-white p-5 text-center shadow-sm border ${
+                    className={`relative flex h-full min-h-[280px] flex-col rounded-2xl bg-white p-5 pt-7 text-center shadow-sm border ${
                       plan.popular ? "border-2 border-primary" : "border-border-default"
                     }`}
                   >
                     {plan.popular && (
-                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-bold text-white">
+                      <span className="absolute -top-3 left-1/2 z-[1] -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-bold text-white">
                         MOST POPULAR
                       </span>
                     )}
-                    <p className="text-xs font-bold uppercase tracking-widest text-text-muted mt-2">{plan.tier}</p>
-                    <p className="mt-2 text-4xl font-extrabold text-foreground">{plan.priceDisplay}</p>
-                    {plan.sub ? <p className="mt-1 text-sm text-text-muted">{plan.sub}</p> : null}
-                    {plan.save ? (
-                      <span className="mt-2 inline-block rounded-full bg-soft-orange px-3 py-0.5 text-xs font-bold text-primary">
-                        {plan.save}
-                      </span>
-                    ) : null}
-                    <p className="mt-2 text-xs text-text-secondary">{plan.note}</p>
-                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="mt-4">
+                    <div className="flex min-h-0 flex-1 flex-col">
+                      <p className="text-xs font-bold uppercase tracking-widest text-text-muted">{plan.tier}</p>
+                      <p className="mt-2 text-4xl font-extrabold text-foreground">{plan.priceDisplay}</p>
+                      {plan.sub ? (
+                        <p className="mt-1 min-h-[1.25rem] text-sm text-text-muted">{plan.sub}</p>
+                      ) : (
+                        <div className="mt-1 min-h-[1.25rem]" aria-hidden />
+                      )}
+                      {plan.save ? (
+                        <span className="mt-2 inline-block rounded-full bg-soft-orange px-3 py-0.5 text-xs font-bold text-primary">
+                          {plan.save}
+                        </span>
+                      ) : (
+                        <div className="mt-2 flex min-h-[1.75rem] items-center justify-center" aria-hidden />
+                      )}
+                      <p className="mt-2 flex-1 text-xs leading-relaxed text-text-secondary">{plan.note}</p>
+                    </div>
+                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="mt-4 shrink-0">
                       <Link
                         href={`/checkout/${params.attemptId}?bundle=${plan.key}`}
                         className="block w-full rounded-lg border-2 border-foreground py-2.5 text-sm font-bold transition hover:bg-foreground hover:text-white"
@@ -278,8 +290,11 @@ export default function ResultPage() {
             <h1 className="text-3xl font-extrabold">Almost there!</h1>
             <p className="text-lg text-text-secondary">
               You got <span className="font-bold text-primary">{score}</span> of{" "}
-              <span className="font-bold">{total}</span> correct. You need{" "}
-              <strong>9 or more</strong> to qualify.
+              <span className="font-bold">{total}</span> correct. You need at least{" "}
+              <strong>
+                {total > 0 ? Math.ceil((total * passThreshold) / 100) : 0}
+              </strong>{" "}
+              to qualify{passThreshold !== 50 ? ` (${passThreshold}% pass bar)` : ""}.
             </p>
 
             {retryInfo.canRetry ? (

@@ -78,11 +78,63 @@ function writeStore(s: Store) {
   writeFileSync(FILE, JSON.stringify(s, null, 2), "utf8");
 }
 
+function walkErrorChain(err: unknown): unknown[] {
+  const chain: unknown[] = [];
+  let e: unknown = err;
+  let depth = 0;
+  while (e != null && depth < 10) {
+    chain.push(e);
+    if (e instanceof Error && e.cause != null) {
+      e = e.cause;
+    } else if (typeof e === "object" && e !== null && "cause" in e) {
+      const next = (e as { cause?: unknown }).cause;
+      if (next == null) break;
+      e = next;
+    } else {
+      break;
+    }
+    depth += 1;
+  }
+  return chain;
+}
+
+function flattenErrorMessage(err: unknown): string {
+  return walkErrorChain(err)
+    .map((e) => {
+      if (e instanceof Error) return `${e.name}: ${e.message}`;
+      if (typeof e === "object" && e !== null) {
+        try {
+          return JSON.stringify(e);
+        } catch {
+          return "[object]";
+        }
+      }
+      return String(e);
+    })
+    .join(" | ");
+}
+
+function collectPostgresCodes(err: unknown): string[] {
+  const codes: string[] = [];
+  for (const e of walkErrorChain(err)) {
+    if (typeof e === "object" && e !== null && "code" in e) {
+      const c = (e as { code?: string }).code;
+      if (typeof c === "string" && c.length > 0) codes.push(c);
+    }
+  }
+  return codes;
+}
+
 /** Use file catalog in dev when DB fails or when EDOOKA_ADMIN_FILE_ONLY=1. */
 export function shouldUseAdminFileCatalog(err: unknown): boolean {
   if (process.env.EDOOKA_ADMIN_FILE_ONLY === "1") return true;
   if (process.env.NODE_ENV === "production") return false;
-  const m = String(err ?? "");
+
+  const codes = collectPostgresCodes(err);
+  if (codes.includes("42P01")) return true; // undefined_table
+  if (codes.includes("3D000")) return true; // invalid_catalog_name (wrong DB)
+
+  const m = flattenErrorMessage(err);
   return (
     m.includes("ECONNREFUSED") ||
     m.includes("ENOTFOUND") ||
@@ -90,12 +142,19 @@ export function shouldUseAdminFileCatalog(err: unknown): boolean {
     m.includes("password authentication failed") ||
     m.includes("getaddrinfo") ||
     m.includes("SASL") ||
-    m.includes("timeout")
+    m.includes("timeout") ||
+    m.includes("Failed query") ||
+    m.includes("no pg_hba.conf entry")
   );
 }
 
 export function adminDbUnavailableHint(): string {
-  return "Start Postgres (e.g. docker compose up -d in the edooka folder), set DATABASE_URL, then run: npm run db:push && npm run seed — or rely on the local file catalog in development.";
+  return [
+    "Postgres error: create tables with `npm run db:push`, then `npm run seed` (from the edooka folder).",
+    "Ensure Postgres is running and DATABASE_URL in .env.local matches (e.g. docker compose up -d).",
+    "Or set EDOOKA_ADMIN_FILE_ONLY=1 in .env.local to use .local/admin-catalog.json for admin CRUD without a DB.",
+    "Note: `npm start` sets NODE_ENV=production — file fallback is disabled; use `npm run dev` for local file fallback.",
+  ].join(" ");
 }
 
 export function fileProgramsList(): FileProgramRow[] {

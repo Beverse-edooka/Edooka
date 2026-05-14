@@ -10,17 +10,17 @@ import { PROGRAMS, type ProgramCard } from "@/data/programs";
  * Purpose: Centered hero, stats, assessments with view-more, how-it-works (pricing moved to post-result checkout).
  */
 
-const dynamicPhrases = ["15 minutes", "a single step", "one assessment"];
+const dynamicPhrases = ["18 minutes", "a single step", "one assessment"];
 
 const howItWorks = [
-  { number: "01", title: "Take the free assessment", description: "18 questions, one per screen. 15 minutes. Designed by domain experts." },
+  { number: "01", title: "Take the free assessment", description: "18 questions, one per screen. 18 minutes. Designed by domain experts." },
   { number: "02", title: "Qualify and unlock", description: "Score 50% or above to qualify. Unlock your certificate from ₹218." },
   { number: "03", title: "Share your credential", description: "PDF cert delivered via email and WhatsApp. Share on LinkedIn instantly." },
 ];
 
 const stats = [
   { value: "06+", label: "ASSESSMENTS" },
-  { value: "18", label: "AVG. TIME" },
+  { value: "18 min", label: "AVG. TIME" },
   { value: "₹218", label: "STARTING" },
   { value: "100%", label: "DIGITAL" },
 ];
@@ -78,7 +78,7 @@ export default function Home() {
         </h1>
 
         <p className="text-base text-black leading-relaxed max-w-xl mx-auto">
-          Take a free 15-minute assessment in your specialty. Earn a verifiable certificate you can share on LinkedIn
+          Take a free 18-minute assessment in your specialty. Earn a verifiable certificate you can share on LinkedIn
           and your resume.
         </p>
 

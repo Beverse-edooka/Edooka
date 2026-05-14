@@ -31,7 +31,9 @@ export async function startAttempt(userId: string, programSlug: string) {
     throw new Error("Retry locked");
   }
 
-  const questionIds = (await getRandomQuestionsForAttempt(program.id)).map((q) => q.id);
+  const questionIds = (
+    await getRandomQuestionsForAttempt(program.id, program.numQuestions)
+  ).map((q) => q.id);
 
   const [created] = await db
     .insert(attempts)
