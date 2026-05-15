@@ -2,38 +2,35 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { PROGRAMS, type ProgramCard } from "@/data/programs";
+import { motion } from "framer-motion";
+import { AssessmentsGrid } from "@/components/assessment/AssessmentsGrid";
+import { ASSESSMENT_DURATION_LABEL, ASSESSMENT_NUM_QUESTIONS, PASS_QUALIFY_COPY } from "@/lib/assessment-constants";
 
 /**
  * Page: HomePage
  * Purpose: Centered hero, stats, assessments with view-more, how-it-works (pricing moved to post-result checkout).
  */
 
-const dynamicPhrases = ["18 minutes", "a single step", "one assessment"];
+const dynamicPhrases = ["15 minutes", "a single step", "one assessment"];
 
 const howItWorks = [
-  { number: "01", title: "Take the free assessment", description: "18 questions, one per screen. 18 minutes. Designed by domain experts." },
-  { number: "02", title: "Qualify and unlock", description: "Score 50% or above to qualify. Unlock your certificate from ₹218." },
+  { number: "01", title: "Take the free assessment", description: `${ASSESSMENT_NUM_QUESTIONS} questions, one per screen. ${ASSESSMENT_DURATION_LABEL}. Designed by domain experts.` },
+  { number: "02", title: "Qualify and unlock", description: `${PASS_QUALIFY_COPY} Unlock your certificate from ₹218.` },
   { number: "03", title: "Share your credential", description: "PDF cert delivered via email and WhatsApp. Share on LinkedIn instantly." },
 ];
 
 const stats = [
   { value: "06+", label: "ASSESSMENTS" },
-  { value: "18 min", label: "AVG. TIME" },
-  { value: "₹218", label: "STARTING" },
+  { value: "15 min", label: "AVG. TIME" },
+  { value: "₹0", label: "ASSESSMENT" },
   { value: "100%", label: "DIGITAL" },
 ];
-
-type FilterType = "All" | "Diagnostics" | "Clinical";
 
 const TRENDING_COUNT = 3;
 
 export default function Home() {
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [visible, setVisible] = useState(true);
-  const [filter, setFilter] = useState<FilterType>("All");
-  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -45,18 +42,6 @@ export default function Home() {
     }, 2800);
     return () => clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    setShowAll(false);
-  }, [filter]);
-
-  const allFiltered: ProgramCard[] =
-    filter === "All" ? PROGRAMS : PROGRAMS.filter((a) => a.category === filter);
-
-  const trending = allFiltered.filter((a) => a.badge === "Trending");
-  const nonTrending = allFiltered.filter((a) => a.badge !== "Trending");
-  const sorted = [...trending, ...nonTrending];
-  const visible_cards = showAll ? sorted : sorted.slice(0, TRENDING_COUNT);
 
   return (
     <div className="space-y-20 py-4">
@@ -78,7 +63,7 @@ export default function Home() {
         </h1>
 
         <p className="text-base text-black leading-relaxed max-w-xl mx-auto">
-          Take a free 18-minute assessment in your specialty. Earn a verifiable certificate you can share on LinkedIn
+          Take a free 15-minute assessment in your specialty. Earn a verifiable certificate you can share on LinkedIn
           and your resume.
         </p>
 
@@ -133,109 +118,22 @@ export default function Home() {
           </motion.div>
         ))}
       </section>
-
       {/* ── Assessments ── */}
-      <section className="space-y-6" id="assessments">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-              <span className="inline-block h-2 w-2 rounded-full bg-primary" />
-              Assessments
-            </p>
-            <h2 className="mt-1 text-3xl font-extrabold">Pick your assessment</h2>
-          </div>
-
-          <div className="flex gap-2">
-            {(["All", "Diagnostics", "Clinical"] as FilterType[]).map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                  filter === f
-                    ? "bg-primary text-white shadow"
-                    : "bg-white border border-border-default text-text-primary hover:border-primary/40"
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          <AnimatePresence mode="popLayout">
-            {visible_cards.map((item, i) => (
-              <motion.article
-                key={item.slug}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ delay: i * 0.07, duration: 0.35 }}
-                whileHover={{
-                  y: -6,
-                  borderColor: "rgba(255,107,53,0.5)",
-                  boxShadow: "0 18px 36px rgba(255,107,53,0.18)",
-                }}
-                className="group rounded-2xl border border-border-default bg-white p-5 shadow-sm"
-                style={{ transition: "border-color 0.28s ease" }}
-              >
-                <span className="inline-block rounded-full bg-soft-orange px-3 py-0.5 text-xs font-semibold text-primary">
-                  {item.badge}
-                </span>
-
-                <div className="mt-4 flex h-12 w-12 items-center justify-center rounded-xl bg-soft-orange">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-                      stroke="#ff6b35"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-
-                <Link href={`/assessment/${item.slug}`} className="block mt-3">
-                  <h3 className="text-lg font-bold leading-snug group-hover:text-primary transition-colors">{item.title}</h3>
-                </Link>
-                <p className="mt-1 text-sm text-text-muted">
-                  {item.questions} questions · {item.durationLabel}
-                </p>
-
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-lg font-extrabold text-primary">₹{item.price}</span>
-                  <motion.div whileHover={{ scale: 1.07 }} whileTap={{ scale: 0.95 }}>
-                    <Link
-                      href={`/start/${item.slug}`}
-                      className="rounded-full bg-soft-orange px-4 py-1.5 text-sm font-semibold text-primary opacity-0 transition-all group-hover:opacity-100 group-hover:bg-primary group-hover:text-white"
-                    >
-                      Start →
-                    </Link>
-                  </motion.div>
-                </div>
-              </motion.article>
-            ))}
-          </AnimatePresence>
-        </div>
-
-        {sorted.length > TRENDING_COUNT && (
-          <div className="flex justify-center pt-2">
-            <motion.button
-              type="button"
-              onClick={() => setShowAll((s) => !s)}
-              whileHover={{ scale: 1.05, backgroundColor: "#ff6b35", color: "#fff" }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 300, damping: 18 }}
-              className="rounded-full border-2 border-primary px-8 py-2.5 text-sm font-semibold text-primary transition-colors"
-            >
-              {showAll ? "Show less ↑" : `View more (${sorted.length - TRENDING_COUNT} more) ↓`}
-            </motion.button>
-          </div>
-        )}
+      <section className="space-y-6 w-full max-w-6xl" id="assessments">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center md:text-left"
+        >
+          <p className="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary md:justify-start">
+            <span className="inline-block h-2 w-2 rounded-full bg-primary" />
+            Assessments
+          </p>
+          <h2 className="mt-1 text-3xl font-extrabold">Pick your assessment</h2>
+        </motion.div>
+        <AssessmentsGrid showStart trendingLimit={TRENDING_COUNT} showViewMore />
       </section>
-
       {/* ── How It Works ── */}
       <section className="rounded-3xl bg-soft-orange px-6 py-12 space-y-8" id="how-it-works">
         <div className="text-center max-w-2xl mx-auto">

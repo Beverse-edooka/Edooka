@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProgramBySlug } from "@/data/programs";
+import { minCorrectToPass, PASS_QUALIFY_COPY } from "@/lib/assessment-constants";
 
 /**
  * Page: ProgramDetail
@@ -38,7 +39,10 @@ export default async function ProgramDetailPage({
         <p className="text-sm text-text-muted">
           Questions: {program.questions} · Estimated time: {program.durationLabel}
         </p>
-        <p className="text-sm text-text-muted">Pass mark: 50% (9 or more correct)</p>
+        <p className="text-sm text-text-muted">{PASS_QUALIFY_COPY}</p>
+        <p className="text-sm text-text-muted">
+          Pass mark: 50% ({minCorrectToPass(program.questions)} or more correct)
+        </p>
         <p className="text-lg font-extrabold text-primary">Unlock certificate from ₹{program.price}</p>
       </aside>
     </section>

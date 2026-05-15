@@ -46,7 +46,7 @@ export function rewriteSupabaseDbUrlIfNeeded(urlStr: string): string {
   }
 
   try {
-    const addr = dnsSync.lookupSync(host, { family: 6 }) as string;
+    const addr = dnsSync.lookupSync(host, 6) as string;
     if (addr?.includes(":")) {
       u.hostname = addr;
       return u.href.replace(/^https?:\/\//, proto);

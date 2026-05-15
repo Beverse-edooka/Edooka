@@ -1,3 +1,8 @@
+import {
+  ASSESSMENT_DURATION_LABEL,
+  ASSESSMENT_NUM_QUESTIONS,
+} from "@/lib/assessment-constants";
+
 /**
  * Canonical catalog for assessments (homepage, assessment detail, quiz labels).
  * Keeps marketing pages working without a running PostgreSQL instance.
@@ -20,8 +25,8 @@ export const PROGRAMS: ProgramCard[] = [
     title: "Diagnostic Lab Operations",
     description:
       "Quality systems, workflow, and safety essentials for pathology and diagnostic laboratory professionals.",
-    questions: 18,
-    durationLabel: "18 min",
+    questions: ASSESSMENT_NUM_QUESTIONS,
+    durationLabel: ASSESSMENT_DURATION_LABEL,
     price: 218,
     badge: "Trending",
   },
@@ -31,8 +36,8 @@ export const PROGRAMS: ProgramCard[] = [
     title: "Nursing Administration",
     description:
       "Leadership, ward coordination, and documentation standards for nursing administrators.",
-    questions: 18,
-    durationLabel: "18 min",
+    questions: ASSESSMENT_NUM_QUESTIONS,
+    durationLabel: ASSESSMENT_DURATION_LABEL,
     price: 218,
     badge: "Trending",
   },
@@ -42,8 +47,8 @@ export const PROGRAMS: ProgramCard[] = [
     title: "Physiotherapy Leadership",
     description:
       "Clinic operations, patient pathways, and team leadership for physiotherapy practice heads.",
-    questions: 18,
-    durationLabel: "18 min",
+    questions: ASSESSMENT_NUM_QUESTIONS,
+    durationLabel: ASSESSMENT_DURATION_LABEL,
     price: 218,
     badge: "Trending",
   },
@@ -53,8 +58,8 @@ export const PROGRAMS: ProgramCard[] = [
     title: "Radiology Workflow Essentials",
     description:
       "Imaging workflow, safety culture, and interdisciplinary coordination in radiology settings.",
-    questions: 18,
-    durationLabel: "18 min",
+    questions: ASSESSMENT_NUM_QUESTIONS,
+    durationLabel: ASSESSMENT_DURATION_LABEL,
     price: 218,
     badge: "Popular",
   },
@@ -64,8 +69,8 @@ export const PROGRAMS: ProgramCard[] = [
     title: "Healthcare Sales Foundations",
     description:
       "Ethical selling, stakeholder alignment, and trust-building in healthcare commercial roles.",
-    questions: 18,
-    durationLabel: "18 min",
+    questions: ASSESSMENT_NUM_QUESTIONS,
+    durationLabel: ASSESSMENT_DURATION_LABEL,
     price: 218,
     badge: "New",
   },
@@ -75,8 +80,8 @@ export const PROGRAMS: ProgramCard[] = [
     title: "Ward Documentation Excellence",
     description:
       "Structured documentation, handoffs, and audit readiness for ward-level clinical teams.",
-    questions: 18,
-    durationLabel: "18 min",
+    questions: ASSESSMENT_NUM_QUESTIONS,
+    durationLabel: ASSESSMENT_DURATION_LABEL,
     price: 218,
     badge: "New",
   },
@@ -84,4 +89,9 @@ export const PROGRAMS: ProgramCard[] = [
 
 export function getProgramBySlug(slug: string): ProgramCard | undefined {
   return PROGRAMS.find((p) => p.slug === slug);
+}
+
+/** Unique categories from the catalog (for filter chips). */
+export function getProgramCategories(): string[] {
+  return [...new Set(PROGRAMS.map((p) => p.category))].sort((a, b) => a.localeCompare(b));
 }

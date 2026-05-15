@@ -24,7 +24,7 @@ export function mapDbQuestionToAssessment(row: QuestionRow): AssessmentQuestion 
 /**
  * Returns up to `count` random questions for one program (fewer if the bank is smaller).
  */
-export async function getRandomQuestionsForAttempt(programId: string, count = 18) {
+export async function getRandomQuestionsForAttempt(programId: string, count = 15) {
   const rows = await db
     .select()
     .from(questions)

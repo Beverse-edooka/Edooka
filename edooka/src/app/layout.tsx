@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Edooka | Validate your skills",
-  description: "Validate your skills. Get certified in 18 minutes.",
+  title: "edooka | Validate your skills",
+  description: "Validate your skills. Get certified in 15 minutes.",
 };
 
 export default function RootLayout({
@@ -26,7 +26,7 @@ export default function RootLayout({
       >
         <div className="flex min-h-screen w-full flex-col px-4 md:px-8 lg:px-12">
           <Nav />
-          <main className="flex-1 py-8">{children}</main>
+          <main className="flex flex-1 flex-col items-center py-8 w-full">{children}</main>
           <Footer />
         </div>
       </body>

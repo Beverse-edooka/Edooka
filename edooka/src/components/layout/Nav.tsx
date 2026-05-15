@@ -10,8 +10,8 @@ import { motion, AnimatePresence } from "framer-motion";
  */
 
 const navLinks = [
-  { href: "/#assessments", label: "All Assessments" },
-  { href: "/library", label: "Certificate Library" },
+  { href: "/verify", label: "Validate Certificate" },
+  { href: "/library", label: "Library" },
 ];
 
 export function Nav() {
@@ -172,7 +172,7 @@ export function Nav() {
               {/* Share options */}
               <div className="grid grid-cols-2 gap-3">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent("Join Edooka – validate your healthcare skills! Use my referral link: " + referralLink)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent("Join edooka – validate your healthcare skills! Use my referral link: " + referralLink)}`}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center justify-center gap-2 rounded-xl border border-border-default py-2.5 text-sm font-semibold hover:border-primary/40 hover:text-primary transition-colors"

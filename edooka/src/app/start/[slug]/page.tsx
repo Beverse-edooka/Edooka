@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMemo } from "react";
 import { getProgramBySlug } from "@/data/programs";
+import { PASS_QUALIFY_COPY } from "@/lib/assessment-constants";
 import { useParams } from "next/navigation";
 import { EDOOKA_ATTEMPT_KEY, persistLearnerProfile, type ActiveAttempt } from "@/lib/session-keys";
 
@@ -126,7 +127,7 @@ export default function StartAssessmentPage() {
       </form>
 
       <p className="text-center text-xs text-text-muted">
-        {program.questions} questions · {program.durationLabel} · 50% to qualify
+        {program.questions} questions · {program.durationLabel} · {PASS_QUALIFY_COPY}
       </p>
     </section>
   );

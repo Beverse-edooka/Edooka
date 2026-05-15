@@ -1,10 +1,11 @@
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, StyleSheet } from "@react-pdf/renderer";
 
 export type CertificatePdfProps = {
   recipientName: string;
   programTitle: string;
   certificateNumber: string;
   issuedDateLabel: string;
+  verifyUrl: string;
 };
 
 const styles = StyleSheet.create({
@@ -66,35 +67,50 @@ const styles = StyleSheet.create({
     color: "#71717a",
     textAlign: "center",
   },
+  qrWrap: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+  qr: {
+    width: 72,
+    height: 72,
+  },
   footer: {
-    marginTop: 40,
+    marginTop: 24,
     fontSize: 10,
     textAlign: "center",
     color: "#a1a1aa",
   },
 });
 
+function qrImageSrc(verifyUrl: string): string {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=${encodeURIComponent(verifyUrl)}`;
+}
+
 export function CertificateDocument({
   recipientName,
   programTitle,
   certificateNumber,
   issuedDateLabel,
+  verifyUrl,
 }: CertificatePdfProps) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         <View style={styles.border}>
           <Text style={styles.label}>Certificate of achievement</Text>
-          <Text style={styles.title}>Edooka Skill Validation</Text>
+          <Text style={styles.title}>edooka Skill Validation</Text>
           <Text style={styles.subtitle}>This certifies that</Text>
           <Text style={styles.name}>{recipientName}</Text>
-          <Text style={styles.body}>
-            has successfully completed the professional assessment for
-          </Text>
+          <Text style={styles.body}>has successfully completed the professional assessment for</Text>
           <Text style={styles.program}>{programTitle}</Text>
-          <Text style={styles.meta}>Certificate no. {certificateNumber}</Text>
+          <Text style={styles.meta}>Certificate ID · {certificateNumber}</Text>
           <Text style={styles.meta}>Issued on {issuedDateLabel}</Text>
-          <Text style={styles.footer}>Verify at edooka.in · Edooka</Text>
+          <View style={styles.qrWrap}>
+            <Image style={styles.qr} src={qrImageSrc(verifyUrl)} />
+          </View>
+          <Text style={styles.footer}>Scan to verify · {verifyUrl}</Text>
+          <Text style={styles.footer}>edooka.in</Text>
         </View>
       </Page>
     </Document>

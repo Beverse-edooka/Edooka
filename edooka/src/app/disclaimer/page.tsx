@@ -8,7 +8,7 @@ export default function DisclaimerPage() {
       <h1 className="text-2xl font-bold">Disclaimer</h1>
       <p>
         This certificate validates skill competency for professional development. It is not a regulatory CPD/CME
-        credit and is not endorsed by NMC, INC, MCI, or state professional councils. Issued by Edooka.
+        credit and is not endorsed by NMC, INC, MCI, or state professional councils. Issued by edooka.
       </p>
     </section>
   );

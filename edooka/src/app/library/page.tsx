@@ -1,31 +1,26 @@
+import { ProgramCardArticle } from "@/components/assessment/ProgramCard";
+import { PROGRAMS } from "@/data/programs";
+
 /**
- * Page: Library
- * Purpose: Displays full course library with trending cards.
+ * Page: Library — course catalog with assessment-style cards.
  */
 export default function LibraryPage() {
-  const courses = [
-    "Diagnostic Lab Operations",
-    "Nursing Administration",
-    "Physiotherapy Leadership",
-    "Radiology Workflow Essentials",
-    "Healthcare Sales Foundations",
-    "Ward Documentation Excellence",
-    "Patient Communication Systems",
-    "Quality Assurance Basics",
-  ];
-
   return (
-    <section className="space-y-4">
-      <h1 className="text-3xl font-bold">Course Library</h1>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {courses.map((course) => (
-          <article
-            key={course}
-            className="card-hover floating-card rounded-2xl border border-primary/20 bg-gradient-to-b from-white to-soft-orange p-4"
-          >
-            <p className="text-sm font-semibold text-primary">Library</p>
-            <h2 className="mt-2 text-base font-bold">{course}</h2>
-          </article>
+    <section className="space-y-10">
+      <div>
+        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+          <span className="inline-block h-2 w-2 rounded-full bg-primary" />
+          Library
+        </p>
+        <h1 className="mt-1 text-3xl font-extrabold">Course library</h1>
+        <p className="mt-2 text-text-secondary max-w-2xl">
+          Browse specialties and start a free skill validation assessment for each course.
+        </p>
+      </div>
+
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {PROGRAMS.map((item) => (
+          <ProgramCardArticle key={item.slug} program={item} showStart={false} />
         ))}
       </div>
     </section>

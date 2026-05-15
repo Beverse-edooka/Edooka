@@ -25,7 +25,7 @@ function CheckoutInner() {
   const [message, setMessage] = useState("");
   const [payError, setPayError] = useState("");
   const [paying, setPaying] = useState(false);
-  const [backHref, setBackHref] = useState(`/result/${params.attemptId}`);
+  const [backHref, setBackHref] = useState(`/result/${params.attemptId}/pricing`);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -46,7 +46,10 @@ function CheckoutInner() {
     }
     if (loaded) setAttempt(loaded);
     const saved = sessionStorage.getItem("edooka_last_result_path");
-    if (saved?.includes(params.attemptId)) setBackHref(saved);
+    if (saved?.includes(params.attemptId)) {
+      const pricingPath = saved.replace(`/result/${params.attemptId}`, `/result/${params.attemptId}/pricing`);
+      setBackHref(pricingPath);
+    }
   }, [params.attemptId]);
 
   const redeemWithCoins = useCallback(() => {
@@ -104,7 +107,7 @@ function CheckoutInner() {
 
   if (!tier) {
     return (
-      <section className="space-y-4">
+      <section className="mx-auto max-w-3xl space-y-4">
         <h1 className="text-2xl font-bold">Invalid package</h1>
         <Link href="/#assessments" className="text-primary font-semibold">
           ← Assessments
@@ -114,12 +117,15 @@ function CheckoutInner() {
   }
 
   return (
-    <section className="space-y-8 max-w-3xl">
+    <section className="mx-auto w-full max-w-3xl space-y-8 text-center">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Checkout</p>
         <h1 className="mt-1 text-3xl font-extrabold">{tier.tier}</h1>
         <p className="mt-2 text-text-secondary">
-          Attempt <span className="font-mono text-sm">{params.attemptId}</span>
+          Attempt <span className="font-mono text-sm break-all">{params.attemptId}</span>
+        </p>
+        <p className="mt-1 text-sm text-text-muted">
+          Includes {tier.certificateCount} certificate{tier.certificateCount > 1 ? "s" : ""} to download
         </p>
       </div>
 
@@ -128,14 +134,14 @@ function CheckoutInner() {
         animate={{ opacity: 1, y: 0 }}
         className="rounded-2xl border border-border-default bg-white p-6 shadow-[0_10px_24px_rgba(255,149,88,0.2)] space-y-4"
       >
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-full text-center">
             <p className="text-sm text-text-muted">Amount due</p>
             <p className="text-4xl font-extrabold text-primary">₹{tier.priceInr}</p>
             <p className="text-sm text-text-secondary mt-1">{tier.note}</p>
           </div>
           {attempt ? (
-            <div className="text-sm text-right text-text-secondary">
+            <div className="text-sm text-center text-text-secondary">
               <p>
                 <strong>{attempt.name}</strong>
               </p>
@@ -143,7 +149,7 @@ function CheckoutInner() {
               <p>{attempt.phone}</p>
             </div>
           ) : (
-            <p className="text-sm text-amber-700 font-semibold">
+            <p className="text-sm text-amber-700 font-semibold text-center">
               Session expired —{" "}
               <Link href="/#assessments" className="underline">
                 restart from assessments
@@ -168,7 +174,7 @@ function CheckoutInner() {
         </p>
       </motion.article>
 
-      <article className="rounded-2xl border border-primary/30 bg-soft-orange p-5 space-y-3">
+      <article className="mx-auto w-full max-w-lg rounded-2xl border border-primary/30 bg-soft-orange p-5 space-y-3 text-center">
         <h3 className="text-xl font-bold">Referral coins</h3>
         <p className="text-text-secondary">
           Current coins: <strong>{coins}</strong> (5 coins = 1 certificate unlock)
@@ -183,7 +189,7 @@ function CheckoutInner() {
         {message ? <p className="text-sm">{message}</p> : null}
       </article>
 
-      <div className="flex gap-4">
+      <div className="flex justify-center">
         <Link href={backHref} className="text-sm text-primary font-semibold">
           ← Back to results
         </Link>

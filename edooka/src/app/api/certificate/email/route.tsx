@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { Resend } from "resend";
 import { CertificateDocument } from "@/components/pdf/CertificateDocument";
+import { verifyUrlForCertificate } from "@/lib/app-url";
 
 export const runtime = "nodejs";
 
@@ -38,12 +39,15 @@ export async function POST(req: NextRequest) {
     body.issuedDateLabel ??
     new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" });
 
+  const verifyUrl = verifyUrlForCertificate(certificateNumber);
+
   const pdfBuffer = await renderToBuffer(
     <CertificateDocument
       recipientName={recipientName}
       programTitle={programTitle}
       certificateNumber={certificateNumber}
       issuedDateLabel={issuedDateLabel}
+      verifyUrl={verifyUrl}
     />
   );
 
@@ -61,11 +65,11 @@ export async function POST(req: NextRequest) {
   const { error } = await resend.emails.send({
     from,
     to: email,
-    subject: `Your Edooka certificate — ${programTitle}`,
+    subject: `Your edooka certificate — ${programTitle}`,
     html: `<p>Hi ${recipientName},</p><p>Congratulations on earning your certificate. Your PDF is attached.</p><p>Certificate number: <strong>${certificateNumber}</strong></p>`,
     attachments: [
       {
-        filename: `Edooka-certificate-${certificateNumber}.pdf`,
+        filename: `edooka-certificate-${certificateNumber}.pdf`,
         content: pdfBuffer,
       },
     ],

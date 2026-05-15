@@ -29,7 +29,7 @@ export default function CertificatePage() {
         <Link href="/dashboard" className="rounded-xl bg-primary px-4 py-2 font-semibold text-white card-hover">
           My certificates
         </Link>
-        <Link href="/verify/EDK-2026-00001" className="rounded-xl border border-border-default px-4 py-2 card-hover">
+        <Link href="/verify" className="rounded-xl border border-border-default px-4 py-2 card-hover">
           Verify sample
         </Link>
         <button

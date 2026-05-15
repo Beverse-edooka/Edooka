@@ -43,8 +43,8 @@ export function shuffleQuestions<T>(items: T[]): T[] {
 }
 
 /**
- * Selects 18 random questions from a 100+ pool.
+ * Selects N random questions from a 100+ pool.
  */
-export function selectAttemptQuestions(pool: AssessmentQuestion[], total = 18) {
+export function selectAttemptQuestions(pool: AssessmentQuestion[], total = 15) {
   return shuffleQuestions(pool).slice(0, total);
 }

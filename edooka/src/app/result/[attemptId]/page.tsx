@@ -6,7 +6,17 @@ import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { getProgramBySlug } from "@/data/programs";
 import { normalizeLearnerAttempt } from "@/lib/learner";
-import { PRICING_TIERS } from "@/lib/pricing";
+import {
+  ASSESSMENT_NUM_QUESTIONS,
+  minCorrectToPass,
+  PASS_QUALIFY_COPY,
+} from "@/lib/assessment-constants";
+import { COMPANY_NAME } from "@/lib/site";
+import {
+  getIssuedForAttempt,
+  getRemainingCredits,
+  isAttemptRedeemed,
+} from "@/lib/certificate-wallet";
 import { EDOOKA_ATTEMPT_KEY, persistLearnerProfile, readLearnerProfile, type ActiveAttempt } from "@/lib/session-keys";
 
 const RETRY_HOURS = 24;
@@ -51,7 +61,7 @@ export default function ResultPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const score = Number(searchParams.get("score") ?? 0);
-  const total = Number(searchParams.get("total") ?? 18);
+  const total = Number(searchParams.get("total") ?? ASSESSMENT_NUM_QUESTIONS);
   const slug = searchParams.get("slug") ?? "";
   const passThresholdRaw = Number(searchParams.get("passThreshold") ?? 50);
   const passThreshold = Number.isFinite(passThresholdRaw)
@@ -66,6 +76,8 @@ export default function ResultPage() {
     canRetry: true,
     hoursLeft: 0,
   });
+  const [walletCredits, setWalletCredits] = useState(0);
+  const [alreadyIssued, setAlreadyIssued] = useState(false);
 
   useEffect(() => {
     sessionStorage.setItem("edooka_last_result_path", `${pathname}?${searchParams.toString()}`);
@@ -145,6 +157,12 @@ export default function ResultPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    setWalletCredits(getRemainingCredits());
+    setAlreadyIssued(isAttemptRedeemed(params.attemptId));
+  }, [params.attemptId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
     const referredBy = localStorage.getItem("edookaReferredBy");
     const hasAwarded = localStorage.getItem("edookaReferralAwarded");
     if (referredBy && !hasAwarded) {
@@ -156,9 +174,11 @@ export default function ResultPage() {
   }, []);
 
   const displayName = attempt?.name ?? "Your name";
-  const shareText = encodeURIComponent(
-    "I completed an Edooka healthcare assessment! https://edooka.in"
-  );
+  const resultQuery = searchParams.toString();
+  const pricingHref = `/result/${params.attemptId}/pricing${resultQuery ? `?${resultQuery}` : ""}`;
+  const redeemHref = `/certificate/redeem/${params.attemptId}`;
+  const minCorrect = minCorrectToPass(total, passThreshold);
+  const issuedCert = getIssuedForAttempt(params.attemptId);
 
   return (
     <>
@@ -185,7 +205,7 @@ export default function ResultPage() {
               <h1 className="text-3xl font-extrabold">You qualified!</h1>
               <p className="opacity-90">
                 You scored <strong>{score}</strong> out of <strong>{total}</strong> in <strong>{courseTitle}</strong>.
-                Unlock your verifiable certificate below.
+                Tap below to acquire your verifiable certificate.
               </p>
             </motion.div>
 
@@ -201,12 +221,12 @@ export default function ResultPage() {
                 <p className="text-sm text-text-muted mt-1">Pay once to unlock · PDF emailed automatically</p>
               </div>
 
-              <div className="blur-[2px] opacity-90">
+              <div className="opacity-90">
                 <p className="text-xs uppercase tracking-widest text-primary font-semibold">
                   Certificate of achievement
                 </p>
                 <p className="mt-3 text-sm text-text-muted">This is to certify that</p>
-                <p className="mt-1 text-2xl font-extrabold text-foreground">{displayName}</p>
+                <p className="mt-1 text-2xl font-extrabold text-foreground blur-[3px] select-none">{displayName}</p>
                 <p className="mt-3 text-sm text-text-secondary">
                   has successfully completed the assessment in{" "}
                   <span className="font-bold text-foreground">{courseTitle}</span>
@@ -214,71 +234,60 @@ export default function ResultPage() {
               </div>
             </motion.div>
 
-            <div className="space-y-4">
-              <div className="text-center space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Choose a package</p>
-                <h2 className="text-2xl font-extrabold">Same pricing · unlock your credential</h2>
-                <p className="text-sm text-text-muted">Secure checkout via Cashfree when configured.</p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3 md:items-stretch">
-                {PRICING_TIERS.map((plan) => (
-                  <motion.article
-                    key={plan.key}
-                    initial={{ opacity: 0, y: 12 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    whileHover={{ y: -4, boxShadow: "0 16px 32px rgba(255,107,53,0.18)" }}
-                    className={`relative flex h-full min-h-[280px] flex-col rounded-2xl bg-white p-5 pt-7 text-center shadow-sm border ${
-                      plan.popular ? "border-2 border-primary" : "border-border-default"
-                    }`}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="text-center space-y-3"
+            >
+              {alreadyIssued && issuedCert ? (
+                <>
+                  <p className="text-sm text-text-secondary">
+                    Certificate issued: <span className="font-mono font-semibold">{issuedCert.certificateNumber}</span>
+                  </p>
+                  <Link
+                    href={redeemHref}
+                    className="inline-flex rounded-xl bg-primary px-8 py-3 text-lg font-semibold text-white shadow hover:bg-primary-hover transition-colors"
                   >
-                    {plan.popular && (
-                      <span className="absolute -top-3 left-1/2 z-[1] -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-bold text-white">
-                        MOST POPULAR
-                      </span>
-                    )}
-                    <div className="flex min-h-0 flex-1 flex-col">
-                      <p className="text-xs font-bold uppercase tracking-widest text-text-muted">{plan.tier}</p>
-                      <p className="mt-2 text-4xl font-extrabold text-foreground">{plan.priceDisplay}</p>
-                      {plan.sub ? (
-                        <p className="mt-1 min-h-[1.25rem] text-sm text-text-muted">{plan.sub}</p>
-                      ) : (
-                        <div className="mt-1 min-h-[1.25rem]" aria-hidden />
-                      )}
-                      {plan.save ? (
-                        <span className="mt-2 inline-block rounded-full bg-soft-orange px-3 py-0.5 text-xs font-bold text-primary">
-                          {plan.save}
-                        </span>
-                      ) : (
-                        <div className="mt-2 flex min-h-[1.75rem] items-center justify-center" aria-hidden />
-                      )}
-                      <p className="mt-2 flex-1 text-xs leading-relaxed text-text-secondary">{plan.note}</p>
-                    </div>
-                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="mt-4 shrink-0">
-                      <Link
-                        href={`/checkout/${params.attemptId}?bundle=${plan.key}`}
-                        className="block w-full rounded-lg border-2 border-foreground py-2.5 text-sm font-bold transition hover:bg-foreground hover:text-white"
-                      >
-                        {plan.cta}
-                      </Link>
-                    </motion.div>
-                  </motion.article>
-                ))}
-              </div>
-
-              <div className="flex items-start gap-3 rounded-xl border border-border-default bg-soft-orange px-5 py-3 text-xs text-text-muted">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0">
-                  <path
-                    d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
-                    stroke="#ff6b35"
-                    strokeWidth="2"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                Secure payment via Cashfree · UPI · Cards · Net Banking · Wallets. GST invoice from Edooka.
-              </div>
-            </div>
+                    Download certificate again
+                  </Link>
+                </>
+              ) : walletCredits > 0 ? (
+                <>
+                  <p className="text-sm text-primary font-semibold">
+                    You have {walletCredits} prepaid certificate credit{walletCredits > 1 ? "s" : ""} from your bundle
+                  </p>
+                  <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                    <Link
+                      href={redeemHref}
+                      className="inline-flex rounded-xl bg-primary px-8 py-3 text-lg font-semibold text-white shadow hover:bg-primary-hover transition-colors"
+                    >
+                      Download certificate (free)
+                    </Link>
+                  </motion.div>
+                  <p className="text-xs text-text-muted">
+                    Or{" "}
+                    <Link href={pricingHref} className="font-semibold text-primary hover:underline">
+                      buy another package
+                    </Link>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                    <Link
+                      href={pricingHref}
+                      className="inline-flex rounded-xl bg-primary px-8 py-3 text-lg font-semibold text-white shadow hover:bg-primary-hover transition-colors"
+                    >
+                      Acquire Certificate
+                    </Link>
+                  </motion.div>
+                  <p className="text-sm text-text-muted">
+                    Choose a package on the next step to unlock your PDF certificate.
+                  </p>
+                </>
+              )}
+            </motion.div>
           </div>
         ) : (
           <motion.div
@@ -290,11 +299,9 @@ export default function ResultPage() {
             <h1 className="text-3xl font-extrabold">Almost there!</h1>
             <p className="text-lg text-text-secondary">
               You got <span className="font-bold text-primary">{score}</span> of{" "}
-              <span className="font-bold">{total}</span> correct. You need at least{" "}
-              <strong>
-                {total > 0 ? Math.ceil((total * passThreshold) / 100) : 0}
-              </strong>{" "}
-              to qualify{passThreshold !== 50 ? ` (${passThreshold}% pass bar)` : ""}.
+              <span className="font-bold">{total}</span> correct. {PASS_QUALIFY_COPY} You needed at least{" "}
+              <strong>{minCorrect}</strong>
+              {passThreshold !== 50 ? ` (${passThreshold}% pass bar)` : ""}.
             </p>
 
             {retryInfo.canRetry ? (

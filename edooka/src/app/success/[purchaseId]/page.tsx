@@ -6,7 +6,10 @@ import { useParams, useSearchParams } from "next/navigation";
 import { pdf } from "@react-pdf/renderer";
 import { motion } from "framer-motion";
 import { CertificateDocument } from "@/components/pdf/CertificateDocument";
+import { verifyUrlForCertificate } from "@/lib/app-url";
 import { certificateNumberForAttempt } from "@/lib/certificate";
+import { addCreditsFromPurchase, redeemCertificateCredit } from "@/lib/certificate-wallet";
+import { getCertificateCountForBundle } from "@/lib/pricing";
 import { getProgramBySlug } from "@/data/programs";
 import { normalizeLearnerAttempt } from "@/lib/learner";
 import { EDOOKA_ATTEMPT_KEY, readLearnerProfile, type ActiveAttempt } from "@/lib/session-keys";
@@ -15,10 +18,19 @@ function SuccessInner() {
   const params = useParams<{ purchaseId: string }>();
   const searchParams = useSearchParams();
   const attemptIdParam = searchParams.get("attemptId") ?? "";
+  const bundleKey = searchParams.get("bundle") ?? "single";
   const demo = searchParams.get("demo") === "1";
+  const certificateCredits = getCertificateCountForBundle(bundleKey);
 
   const [attempt, setAttempt] = useState<ActiveAttempt | null>(null);
   const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "skipped" | "error">("idle");
+  const [issuedDateLabel, setIssuedDateLabel] = useState("");
+  const [shareUrls, setShareUrls] = useState<{ linkedIn: string; wa: string } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    addCreditsFromPurchase(params.purchaseId, certificateCredits);
+  }, [params.purchaseId, certificateCredits]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -49,40 +61,55 @@ function SuccessInner() {
     [attempt?.attemptId, attemptIdParam, params.purchaseId]
   );
 
-  const issuedDateLabel = useMemo(
-    () =>
+  const recipientName = attempt?.name ?? "Learner";
+  const programTitle = attempt?.programTitle || program?.title || "Healthcare assessment";
+  const verifyUrl = useMemo(() => verifyUrlForCertificate(certNumber), [certNumber]);
+
+  useEffect(() => {
+    setIssuedDateLabel(
       new Date().toLocaleDateString("en-IN", {
         year: "numeric",
         month: "long",
         day: "numeric",
-      }),
-    []
-  );
-
-  const recipientName = attempt?.name ?? "Learner";
-
-  const programTitle =
-    attempt?.programTitle || program?.title || "Healthcare assessment";
+      })
+    );
+    setShareUrls({
+      linkedIn: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(verifyUrl)}`,
+      wa: `https://wa.me/?text=${encodeURIComponent(
+        `I earned my edooka certificate for ${programTitle}! Verify: ${verifyUrl}`
+      )}`,
+    });
+  }, [verifyUrl, programTitle]);
 
   const downloadPdf = useCallback(async () => {
+    const attemptId = attemptIdParam || attempt?.attemptId;
+    if (attemptId && attempt?.slug) {
+      redeemCertificateCredit({
+        attemptId,
+        slug: attempt.slug,
+        programTitle,
+        purchaseId: params.purchaseId,
+      });
+    }
     const blob = await pdf(
       <CertificateDocument
         recipientName={recipientName}
         programTitle={programTitle}
         certificateNumber={certNumber}
-        issuedDateLabel={issuedDateLabel}
+        issuedDateLabel={issuedDateLabel || "—"}
+        verifyUrl={verifyUrl}
       />
     ).toBlob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Edooka-certificate-${certNumber}.pdf`;
+    a.download = `edooka-certificate-${certNumber}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [recipientName, programTitle, certNumber, issuedDateLabel]);
+  }, [recipientName, programTitle, certNumber, issuedDateLabel, verifyUrl]);
 
   useEffect(() => {
-    if (!attempt?.email) return;
+    if (!attempt?.email || !issuedDateLabel) return;
     const storageKey = `edooka_cert_email_${params.purchaseId}`;
     if (sessionStorage.getItem(storageKey)) {
       setEmailStatus("sent");
@@ -98,6 +125,7 @@ function SuccessInner() {
         programTitle,
         certificateNumber: certNumber,
         issuedDateLabel,
+        verifyUrl,
       }),
     })
       .then(async (res) => {
@@ -109,17 +137,7 @@ function SuccessInner() {
         } else setEmailStatus("error");
       })
       .catch(() => setEmailStatus("error"));
-  }, [attempt, certNumber, issuedDateLabel, params.purchaseId, programTitle, recipientName]);
-
-  const verifyUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/verify/${encodeURIComponent(certNumber)}`
-      : `https://edooka.in/verify/${encodeURIComponent(certNumber)}`;
-
-  const linkedInShare = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(verifyUrl)}`;
-  const waShare = `https://wa.me/?text=${encodeURIComponent(
-    `I earned my Edooka certificate for ${programTitle}! Verify: ${verifyUrl}`
-  )}`;
+  }, [attempt, certNumber, issuedDateLabel, params.purchaseId, programTitle, recipientName, verifyUrl]);
 
   return (
     <section className="mx-auto max-w-2xl space-y-8">
@@ -135,6 +153,10 @@ function SuccessInner() {
           Your certificate is ready. A PDF copy is sent to your email when mail is configured.
         </p>
         <p className="text-sm text-text-muted font-mono">Order ref · {params.purchaseId}</p>
+        <p className="text-sm text-primary font-semibold">
+          Your plan includes {certificateCredits} certificate download
+          {certificateCredits > 1 ? "s" : ""} (use now or later).
+        </p>
       </motion.div>
 
       <motion.div
@@ -164,22 +186,26 @@ function SuccessInner() {
         >
           Download PDF
         </motion.button>
-        <a
-          href={linkedInShare}
-          target="_blank"
-          rel="noreferrer"
-          className="rounded-xl border border-border-default px-6 py-3 font-semibold card-hover"
-        >
-          Share on LinkedIn
-        </a>
-        <a
-          href={waShare}
-          target="_blank"
-          rel="noreferrer"
-          className="rounded-xl border border-border-default px-6 py-3 font-semibold card-hover"
-        >
-          Share on WhatsApp
-        </a>
+        {shareUrls ? (
+          <>
+            <a
+              href={shareUrls.linkedIn}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl border border-border-default px-6 py-3 font-semibold card-hover"
+            >
+              Share on LinkedIn
+            </a>
+            <a
+              href={shareUrls.wa}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl border border-border-default px-6 py-3 font-semibold card-hover"
+            >
+              Share on WhatsApp
+            </a>
+          </>
+        ) : null}
       </div>
 
       <p className="text-center text-sm text-text-muted">
