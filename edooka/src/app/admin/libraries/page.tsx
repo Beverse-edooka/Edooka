@@ -22,7 +22,7 @@ const defaultForm = {
   title: "",
   description: "",
   category: "",
-  durationMinutes: 15,
+  durationMinutes: 18,
   numQuestions: 18,
   passThreshold: 50,
   iconName: "",

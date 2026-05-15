@@ -46,7 +46,7 @@ export const programs = pgTable("programs", {
   title: text("title").notNull(),
   description: text("description"),
   category: text("category").notNull(),
-  durationMinutes: integer("duration_minutes").notNull().default(15),
+  durationMinutes: integer("duration_minutes").notNull().default(18),
   numQuestions: integer("num_questions").notNull().default(18),
   passThreshold: integer("pass_threshold").notNull().default(50),
   iconName: text("icon_name"),

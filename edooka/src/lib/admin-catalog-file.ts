@@ -43,7 +43,7 @@ function seedStore(): Store {
     title: p.title,
     description: p.description ?? null,
     category: p.category,
-    durationMinutes: 15,
+    durationMinutes: 18,
     numQuestions: p.questions ?? 18,
     passThreshold: 50,
     iconName: null,

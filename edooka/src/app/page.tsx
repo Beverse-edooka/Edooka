@@ -84,10 +84,15 @@ export default function Home() {
 
         <div className="flex flex-wrap justify-center gap-4">
           <motion.div
-            whileHover={{ scale: 1.04, backgroundColor: "#18181b", color: "#ffffff" }}
+            whileHover={{
+              scale: 1.04,
+              backgroundColor: "#ff9a60",
+              color: "#000000",
+              boxShadow: "0 18px 40px rgba(255,154,96,0.24)",
+            }}
             whileTap={{ scale: 0.97 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className="rounded-lg border-2 border-foreground bg-white px-6 py-3 font-semibold text-foreground shadow-sm cursor-pointer select-none"
+            className="rounded-lg bg-white px-6 py-3 font-semibold text-black shadow-sm cursor-pointer select-none"
           >
             <a href="#assessments" className="block">
               Take free assessment
@@ -95,10 +100,15 @@ export default function Home() {
           </motion.div>
 
           <motion.div
-            whileHover={{ scale: 1.04, backgroundColor: "#18181b", color: "#ffffff" }}
+            whileHover={{
+              scale: 1.04,
+              backgroundColor: "#ff9a60",
+              color: "#000000",
+              boxShadow: "0 18px 40px rgba(255,154,96,0.24)",
+            }}
             whileTap={{ scale: 0.97 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className="rounded-lg border-2 border-foreground bg-white px-6 py-3 font-semibold text-foreground shadow-sm cursor-pointer select-none"
+            className="rounded-lg bg-white px-6 py-3 font-semibold text-black shadow-sm cursor-pointer select-none"
           >
             <a href="#how-it-works" className="block">
               How it works

@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     title: body.title.trim(),
     description: body.description?.trim() ?? null,
     category: body.category.trim(),
-    durationMinutes: body.durationMinutes ?? 15,
+    durationMinutes: body.durationMinutes ?? 18,
     numQuestions: body.numQuestions ?? 18,
     passThreshold: body.passThreshold ?? 50,
     iconName: body.iconName?.trim() || null,

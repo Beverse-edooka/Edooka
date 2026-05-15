@@ -49,7 +49,7 @@ export function Footer() {
                   href="/admin/login"
                   className="text-text-secondary hover:text-primary font-medium transition-colors"
                 >
-                  Admin / Staff login
+                  Admin login
                 </Link>
               </li>
             </ul>

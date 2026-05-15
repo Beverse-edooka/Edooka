@@ -11,7 +11,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Edooka | Validate your skills",
-  description: "Validate your skills. Get certified in 15 minutes.",
+  description: "Validate your skills. Get certified in 18 minutes.",
 };
 
 export default function RootLayout({
