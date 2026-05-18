@@ -14,9 +14,9 @@ import { ASSESSMENT_DURATION_LABEL, ASSESSMENT_NUM_QUESTIONS, PASS_QUALIFY_COPY 
 const dynamicPhrases = ["15 minutes", "a single step", "one assessment"];
 
 const howItWorks = [
-  { number: "01", title: "Take the free assessment", description: `${ASSESSMENT_NUM_QUESTIONS} questions, one per screen. ${ASSESSMENT_DURATION_LABEL}. Designed by domain experts.` },
-  { number: "02", title: "Qualify and unlock", description: `${PASS_QUALIFY_COPY} Unlock your certificate from ₹218.` },
-  { number: "03", title: "Share your credential", description: "PDF cert delivered via email and WhatsApp. Share on LinkedIn instantly." },
+  { number: "01", title: "Take the free assessment", description: "Complete 15 expert-designed questions in a focused 15-minute assessment experience." },
+  { number: "02", title: "Qualify and unlock", description: "Prove your expertise. Pass the assessment and unlock your professional certification from ₹218." },
+  { number: "03", title: "Share your credential", description: "Receive your certificate directly by email and share your achievement instantly on WhatsApp or LinkedIn." },
 ];
 
 const stats = [

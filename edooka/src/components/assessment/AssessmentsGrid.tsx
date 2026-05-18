@@ -17,7 +17,9 @@ export function AssessmentsGrid({ showStart = true, trendingLimit, showViewMore 
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
-    setShowAll(false);
+    setTimeout(() => {
+      setShowAll(false);
+    }, 0);
   }, [filter]);
 
   const filtered: ProgramCard[] =

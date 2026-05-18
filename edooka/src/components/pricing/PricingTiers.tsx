@@ -17,15 +17,18 @@ type Props = {
  * Certificate package grid (post-qualification pricing).
  */
 export function PricingTiers({ attemptId, backHref, backLabel = "← Back to results" }: Props) {
-  const [credits, setCredits] = useState(0);
+  const [credits, setCredits] = useState<number | null>(null);
 
   useEffect(() => {
-    setCredits(getRemainingCredits());
+    const timer = setTimeout(() => {
+      setCredits(getRemainingCredits());
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
     <section className="mx-auto max-w-5xl space-y-8">
-      {credits > 0 ? (
+      {credits !== null && credits > 0 ? (
         <div className="rounded-xl border border-primary/30 bg-soft-orange px-5 py-4 text-center space-y-2">
           <p className="text-sm font-semibold text-primary">
             You have {credits} prepaid certificate credit{credits > 1 ? "s" : ""} — no payment needed

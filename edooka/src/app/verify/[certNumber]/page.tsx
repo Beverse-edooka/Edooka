@@ -27,8 +27,10 @@ export default function VerifyPage() {
 
   useEffect(() => {
     if (!certNumber) {
-      setResult({ valid: false, message: "Certificate number is required." });
-      setLoading(false);
+      setTimeout(() => {
+        setResult({ valid: false, message: "Certificate number is required." });
+        setLoading(false);
+      }, 0);
       return;
     }
 

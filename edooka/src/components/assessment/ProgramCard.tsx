@@ -13,8 +13,9 @@ type Props = {
  */
 export function ProgramCardArticle({ program, showStart = true }: Props) {
   return (
-    <article className="group rounded-2xl border border-border-default bg-white p-5 shadow-sm hover:border-primary/40 transition-colors">
-      <span className="inline-block rounded-full bg-soft-orange px-3 py-0.5 text-xs font-semibold text-primary">
+    <article className="group flex flex-col h-full rounded-2xl border border-border-default bg-white p-5 shadow-sm hover:border-primary/40 transition-colors">
+      <div>
+        <span className="inline-block rounded-full bg-soft-orange px-3 py-0.5 text-xs font-semibold text-primary">
         {program.badge}
       </span>
 
@@ -38,7 +39,8 @@ export function ProgramCardArticle({ program, showStart = true }: Props) {
         {program.questions} questions · {program.durationLabel || ASSESSMENT_DURATION_LABEL}
       </p>
 
-      <div className="mt-5 flex flex-wrap gap-3">
+      </div>
+      <div className="mt-auto pt-5 flex flex-wrap gap-3">
         {showStart ? (
           <Link
             href={`/start/${program.slug}`}

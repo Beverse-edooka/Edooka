@@ -53,7 +53,9 @@ export function Nav() {
         const currentCoins = Number(localStorage.getItem("edookaCoins") ?? 0);
         localStorage.setItem("edookaCoins", String(currentCoins + referralCoins));
         localStorage.removeItem(referralCoinKey); // Clear after claiming
-        setCoins(currentCoins + referralCoins);
+        setTimeout(() => {
+          setCoins(currentCoins + referralCoins);
+        }, 0);
       }
     }
   }, []);
@@ -63,12 +65,6 @@ export function Nav() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
-  }
-
-  function addReferralCoin() {
-    const next = coins + 1;
-    localStorage.setItem("edookaCoins", String(next));
-    setCoins(next);
   }
 
   return (

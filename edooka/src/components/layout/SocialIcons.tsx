@@ -26,28 +26,41 @@ function LinkedInIcon({ className }: IconProps) {
   );
 }
 
-const items = [
-  { label: "Instagram", href: SOCIAL_LINKS.instagram, Icon: InstagramIcon },
-  { label: "Facebook", href: SOCIAL_LINKS.facebook, Icon: FacebookIcon },
-  { label: "LinkedIn", href: SOCIAL_LINKS.linkedin, Icon: LinkedInIcon },
-] as const;
+
 
 export function SocialIcons() {
   return (
-    <div className="flex flex-wrap gap-3 pt-1">
-      {items.map(({ label, href, Icon }) => (
-        <a
-          key={label}
-          href={href}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border-default bg-white text-text-secondary hover:border-primary hover:text-primary transition-colors"
-          aria-label={label}
-          title={label}
-        >
-          <Icon className="h-5 w-5" />
-        </a>
-      ))}
+    <div className="flex flex-wrap items-center gap-4 pt-1">
+      <a
+        href={SOCIAL_LINKS.instagram}
+        target="_blank"
+        rel="noreferrer noopener"
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border-default bg-white text-[#E1306C] hover:border-[#E1306C] transition-colors shadow-sm"
+        aria-label="Instagram"
+        title="Instagram"
+      >
+        <InstagramIcon className="h-5 w-5" />
+      </a>
+      <a
+        href={SOCIAL_LINKS.facebook}
+        target="_blank"
+        rel="noreferrer noopener"
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border-default bg-white text-[#1877F2] hover:border-[#1877F2] transition-colors shadow-sm"
+        aria-label="Facebook"
+        title="Facebook"
+      >
+        <FacebookIcon className="h-5 w-5" />
+      </a>
+      <a
+        href={SOCIAL_LINKS.linkedin}
+        target="_blank"
+        rel="noreferrer noopener"
+        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border-default bg-white text-[#0A66C2] hover:border-[#0A66C2] transition-colors shadow-sm"
+        aria-label="LinkedIn"
+        title="LinkedIn"
+      >
+        <LinkedInIcon className="h-5 w-5" />
+      </a>
     </div>
   );
 }

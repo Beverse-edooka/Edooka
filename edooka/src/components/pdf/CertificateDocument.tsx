@@ -107,6 +107,7 @@ export function CertificateDocument({
           <Text style={styles.meta}>Certificate ID · {certificateNumber}</Text>
           <Text style={styles.meta}>Issued on {issuedDateLabel}</Text>
           <View style={styles.qrWrap}>
+            {/* eslint-disable-next-line jsx-a11y/alt-text */}
             <Image style={styles.qr} src={qrImageSrc(verifyUrl)} />
           </View>
           <Text style={styles.footer}>Scan to verify · {verifyUrl}</Text>

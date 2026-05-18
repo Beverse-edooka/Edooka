@@ -66,19 +66,23 @@ function SuccessInner() {
   const verifyUrl = useMemo(() => verifyUrlForCertificate(certNumber), [certNumber]);
 
   useEffect(() => {
-    setIssuedDateLabel(
-      new Date().toLocaleDateString("en-IN", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    );
-    setShareUrls({
-      linkedIn: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(verifyUrl)}`,
-      wa: `https://wa.me/?text=${encodeURIComponent(
-        `I earned my edooka certificate for ${programTitle}! Verify: ${verifyUrl}`
-      )}`,
-    });
+    setTimeout(() => {
+      setIssuedDateLabel(
+        new Date().toLocaleDateString("en-IN", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      );
+    }, 0);
+    setTimeout(() => {
+      setShareUrls({
+        linkedIn: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(verifyUrl)}`,
+        wa: `https://wa.me/?text=${encodeURIComponent(
+          `I earned my edooka certificate for ${programTitle}! Verify: ${verifyUrl}`
+        )}`,
+      });
+    }, 0);
   }, [verifyUrl, programTitle]);
 
   const downloadPdf = useCallback(async () => {
@@ -112,10 +116,14 @@ function SuccessInner() {
     if (!attempt?.email || !issuedDateLabel) return;
     const storageKey = `edooka_cert_email_${params.purchaseId}`;
     if (sessionStorage.getItem(storageKey)) {
-      setEmailStatus("sent");
+      setTimeout(() => {
+        setEmailStatus("sent");
+      }, 0);
       return;
     }
-    setEmailStatus("sending");
+    setTimeout(() => {
+      setEmailStatus("sending");
+    }, 0);
     void fetch("/api/certificate/email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

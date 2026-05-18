@@ -47,6 +47,11 @@ export function Footer() {
                   Refund Scheme
                 </Link>
               </li>
+              <li>
+                <Link href="/terms" className="text-text-secondary hover:text-primary font-medium transition-colors">
+                  Terms & Conditions
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
