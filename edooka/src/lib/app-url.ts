@@ -6,6 +6,11 @@ export function getAppOrigin(): string {
   return "https://edooka.in";
 }
 
-export function verifyUrlForCertificate(certificateNumber: string): string {
-  return `${getAppOrigin()}/verify/${encodeURIComponent(certificateNumber)}`;
+/**
+ * Build a public verify URL. Accepts either a certificate number
+ * (e.g. `EDK-2026-00001`) or an opaque qrToken — the `/verify/[token]`
+ * route + API resolves both.
+ */
+export function verifyUrlForCertificate(token: string): string {
+  return `${getAppOrigin()}/verify/${encodeURIComponent(token)}`;
 }
