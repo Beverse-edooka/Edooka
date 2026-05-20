@@ -31,6 +31,19 @@ body {
   color: var(--foreground);
 }
 
+/* Full-width page content aligned with site max-width */
+.page-main {
+  width: 100%;
+  max-width: 72rem;
+  margin-left: auto;
+  margin-right: auto;
+  align-items: stretch;
+}
+
+.page-main > * {
+  width: 100%;
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;

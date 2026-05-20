@@ -3,14 +3,18 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { pdf } from "@react-pdf/renderer";
 import { motion } from "framer-motion";
-import { CertificateDocument } from "@/components/pdf/CertificateDocument";
+import { CertificateShareButtons } from "@/components/certificate/ShareButtons";
 import { verifyUrlForCertificate } from "@/lib/app-url";
 import { certificateNumberForAttempt } from "@/lib/certificate";
-import { addCreditsFromPurchase, redeemCertificateCredit } from "@/lib/certificate-wallet";
+import {
+  addCreditsFromPurchase,
+  getRemainingCredits,
+  getIssuedForAttempt,
+  redeemCertificateCredit,
+} from "@/lib/certificate-wallet";
+import { downloadCertificatePng } from "@/lib/download-certificate";
 import { getCertificateCountForBundle } from "@/lib/pricing";
-import { getProgramBySlug } from "@/data/programs";
 import { normalizeLearnerAttempt } from "@/lib/learner";
 import { EDOOKA_ATTEMPT_KEY, readLearnerProfile, type ActiveAttempt } from "@/lib/session-keys";
 
@@ -25,12 +29,10 @@ function SuccessInner() {
   const [attempt, setAttempt] = useState<ActiveAttempt | null>(null);
   const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "skipped" | "error">("idle");
   const [issuedDateLabel, setIssuedDateLabel] = useState("");
-  const [shareUrls, setShareUrls] = useState<{ linkedIn: string; wa: string } | null>(null);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    addCreditsFromPurchase(params.purchaseId, certificateCredits);
-  }, [params.purchaseId, certificateCredits]);
+  const [remainingCredits, setRemainingCredits] = useState(0);
+  const [certNumber, setCertNumber] = useState("");
+  const [fulfillmentDone, setFulfillmentDone] = useState(false);
+  const [issueError, setIssueError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -51,19 +53,131 @@ function SuccessInner() {
     if (loaded) setAttempt(loaded);
   }, [attemptIdParam]);
 
-  const program = useMemo(
-    () => (attempt?.slug ? getProgramBySlug(attempt.slug) : undefined),
-    [attempt?.slug]
-  );
-
-  const certNumber = useMemo(
-    () => certificateNumberForAttempt(attemptIdParam || attempt?.attemptId || params.purchaseId),
-    [attempt?.attemptId, attemptIdParam, params.purchaseId]
-  );
-
   const recipientName = attempt?.name ?? "Learner";
-  const programTitle = attempt?.programTitle || program?.title || "Healthcare assessment";
-  const verifyUrl = useMemo(() => verifyUrlForCertificate(certNumber), [certNumber]);
+  const programTitle = attempt?.programTitle ?? "Healthcare assessment";
+  const verifyUrl = useMemo(
+    () => (certNumber ? verifyUrlForCertificate(certNumber) : ""),
+    [certNumber]
+  );
+
+  // On payment success: add bundle credits, consume one for this attempt, persist + email (once).
+  useEffect(() => {
+    if (typeof window === "undefined" || !attempt || fulfillmentDone) return;
+    const attemptId = attemptIdParam || attempt.attemptId;
+    if (!attemptId || !attempt.slug) return;
+
+    const flagKey = `edooka_fulfilled_${params.purchaseId}`;
+    if (sessionStorage.getItem(flagKey)) {
+      const issued = getIssuedForAttempt(attemptId);
+      const existing = issued?.certificateNumber ?? certificateNumberForAttempt(attemptId);
+      setTimeout(() => {
+        setCertNumber(existing);
+        setRemainingCredits(getRemainingCredits());
+        setFulfillmentDone(true);
+      }, 0);
+      return;
+    }
+
+    addCreditsFromPurchase(params.purchaseId, certificateCredits);
+    const redeem = redeemCertificateCredit({
+      attemptId,
+      slug: attempt.slug,
+      programTitle,
+      purchaseId: params.purchaseId,
+    });
+
+    const number = redeem.ok
+      ? redeem.certificate.certificateNumber
+      : certificateNumberForAttempt(attemptId);
+
+    setTimeout(() => {
+      setCertNumber(number);
+      setRemainingCredits(getRemainingCredits());
+      setFulfillmentDone(true);
+    }, 0);
+
+    sessionStorage.setItem(flagKey, "1");
+
+    setIssueError(null);
+    fetch("/api/certificate/issue", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        attemptId,
+        orderId: params.purchaseId,
+        bundleKey,
+        slug: attempt.slug,
+        certificateNumber: number,
+        name: attempt.name,
+        email: attempt.email,
+        phone: attempt.phone,
+        programTitle,
+        score: attempt.examScore,
+        total: attempt.examTotal,
+        passed: attempt.examPassed,
+      }),
+    })
+      .then(async (res) => {
+        if (res.ok) return;
+        let detail = "";
+        try {
+          const data = (await res.json()) as { error?: string };
+          detail = data.error ?? "";
+        } catch {
+          /* ignore non-JSON */
+        }
+        setIssueError(
+          detail
+            ? `Could not register certificate — ${detail}. Verification may fail until you retry.`
+            : "Could not register certificate — verification may fail until you retry.",
+        );
+        sessionStorage.removeItem(flagKey);
+      })
+      .catch(() => {
+        setIssueError(
+          "Could not register certificate — check your connection and refresh to retry.",
+        );
+        sessionStorage.removeItem(flagKey);
+      });
+
+    if (attempt.email) {
+      const emailKey = `edooka_cert_email_${params.purchaseId}`;
+      if (!sessionStorage.getItem(emailKey)) {
+        setEmailStatus("sending");
+        void fetch("/api/certificate/email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: attempt.email,
+            recipientName,
+            programTitle,
+            certificateNumber: number,
+            verifyUrl: verifyUrlForCertificate(number),
+          }),
+        })
+          .then(async (res) => {
+            const data = (await res.json()) as { skipped?: boolean };
+            if (data.skipped) setEmailStatus("skipped");
+            else if (res.ok) {
+              setEmailStatus("sent");
+              sessionStorage.setItem(emailKey, "1");
+            } else setEmailStatus("error");
+          })
+          .catch(() => setEmailStatus("error"));
+      } else {
+        setEmailStatus("sent");
+      }
+    }
+  }, [
+    attempt,
+    attemptIdParam,
+    bundleKey,
+    certificateCredits,
+    fulfillmentDone,
+    params.purchaseId,
+    programTitle,
+    recipientName,
+  ]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -75,112 +189,53 @@ function SuccessInner() {
         })
       );
     }, 0);
-    setTimeout(() => {
-      setShareUrls({
-        linkedIn: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(verifyUrl)}`,
-        wa: `https://wa.me/?text=${encodeURIComponent(
-          `I earned my edooka certificate for ${programTitle}! Verify: ${verifyUrl}`
-        )}`,
-      });
-    }, 0);
-  }, [verifyUrl, programTitle]);
+  }, []);
 
-  const downloadPdf = useCallback(async () => {
-    const attemptId = attemptIdParam || attempt?.attemptId;
-    if (attemptId && attempt?.slug) {
-      redeemCertificateCredit({
-        attemptId,
-        slug: attempt.slug,
-        programTitle,
-        purchaseId: params.purchaseId,
-      });
-    }
-    const blob = await pdf(
-      <CertificateDocument
-        recipientName={recipientName}
-        programTitle={programTitle}
-        certificateNumber={certNumber}
-        issuedDateLabel={issuedDateLabel || "—"}
-        verifyUrl={verifyUrl}
-      />
-    ).toBlob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `edooka-certificate-${certNumber}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [recipientName, programTitle, certNumber, issuedDateLabel, verifyUrl]);
-
-  useEffect(() => {
-    if (!attempt?.email || !issuedDateLabel) return;
-    const storageKey = `edooka_cert_email_${params.purchaseId}`;
-    if (sessionStorage.getItem(storageKey)) {
-      setTimeout(() => {
-        setEmailStatus("sent");
-      }, 0);
-      return;
-    }
-    setTimeout(() => {
-      setEmailStatus("sending");
-    }, 0);
-    void fetch("/api/certificate/email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: attempt.email,
-        recipientName,
-        programTitle,
-        certificateNumber: certNumber,
-        issuedDateLabel,
-        verifyUrl,
-      }),
-    })
-      .then(async (res) => {
-        const data = (await res.json()) as { skipped?: boolean; ok?: boolean };
-        if (data.skipped) setEmailStatus("skipped");
-        else if (res.ok) {
-          setEmailStatus("sent");
-          sessionStorage.setItem(storageKey, "1");
-        } else setEmailStatus("error");
-      })
-      .catch(() => setEmailStatus("error"));
-  }, [attempt, certNumber, issuedDateLabel, params.purchaseId, programTitle, recipientName, verifyUrl]);
+  const downloadCert = useCallback(async () => {
+    if (!certNumber) return;
+    await downloadCertificatePng({
+      fullName: recipientName,
+      courseName: programTitle,
+      certificateNumber: certNumber,
+      verifyUrl: verifyUrl || verifyUrlForCertificate(certNumber),
+    });
+  }, [certNumber, recipientName, programTitle, verifyUrl]);
 
   return (
-    <section className="mx-auto max-w-2xl space-y-8">
+    <section className="mx-auto w-full max-w-2xl space-y-6 sm:space-y-8">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border border-border-default bg-white p-8 shadow-[0_14px_36px_rgba(255,149,88,0.22)] text-center space-y-4"
+        className="space-y-4 rounded-2xl border border-border-default bg-white p-6 text-center shadow-[0_14px_36px_rgba(255,149,88,0.22)] sm:p-8"
       >
         <p className="text-4xl">🏆</p>
-        <h1 className="text-3xl font-extrabold">Payment confirmed</h1>
-        <p className="text-text-secondary">
+        <h1 className="text-2xl font-extrabold sm:text-3xl">Payment confirmed</h1>
+        <p className="text-sm text-text-secondary sm:text-base">
           {demo ? "Demo mode — no payment processed. " : null}
-          Your certificate is ready. A PDF copy is sent to your email when mail is configured.
+          Your certificate has been issued. A copy is emailed when Gmail is configured.
         </p>
-        <p className="text-sm text-text-muted font-mono">Order ref · {params.purchaseId}</p>
-        <p className="text-sm text-primary font-semibold">
-          Your plan includes {certificateCredits} certificate download
-          {certificateCredits > 1 ? "s" : ""} (use now or later).
-        </p>
+        <p className="font-mono text-xs text-text-muted sm:text-sm">Order ref · {params.purchaseId}</p>
+        {certificateCredits > 1 ? (
+          <p className="text-sm font-semibold text-primary">
+            {remainingCredits} certificate credit{remainingCredits !== 1 ? "s" : ""} left for future exams.
+          </p>
+        ) : null}
       </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="rounded-2xl border-2 border-primary/25 bg-soft-orange p-8 space-y-4 text-center"
+        className="space-y-4 rounded-2xl border-2 border-primary/25 bg-soft-orange p-6 text-center sm:p-8"
       >
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Certificate of achievement</p>
         <p className="text-sm text-text-muted">Presented to</p>
-        <p className="text-3xl font-extrabold text-foreground">{recipientName}</p>
+        <p className="text-2xl font-extrabold text-foreground sm:text-3xl">{recipientName}</p>
         <p className="text-sm text-text-secondary">
           for completing <strong>{programTitle}</strong>
         </p>
-        <p className="text-xs text-text-muted pt-2">
-          {certNumber} · {issuedDateLabel}
+        <p className="pt-2 text-xs text-text-muted">
+          {certNumber || "…"} · {issuedDateLabel}
         </p>
       </motion.div>
 
@@ -189,44 +244,34 @@ function SuccessInner() {
           type="button"
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => void downloadPdf()}
-          className="rounded-xl bg-primary px-6 py-3 font-semibold text-white shadow"
+          disabled={!certNumber}
+          onClick={() => void downloadCert()}
+          className="rounded-xl bg-primary px-5 py-2.5 font-semibold text-white shadow disabled:opacity-50 sm:px-6 sm:py-3"
         >
-          Download PDF
+          Download certificate
         </motion.button>
-        {shareUrls ? (
-          <>
-            <a
-              href={shareUrls.linkedIn}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-xl border border-border-default px-6 py-3 font-semibold card-hover"
-            >
-              Share on LinkedIn
-            </a>
-            <a
-              href={shareUrls.wa}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-xl border border-border-default px-6 py-3 font-semibold card-hover"
-            >
-              Share on WhatsApp
-            </a>
-          </>
+        {verifyUrl ? (
+          <CertificateShareButtons verifyUrl={verifyUrl} programTitle={programTitle} />
         ) : null}
       </div>
 
       <p className="text-center text-sm text-text-muted">
-        Email delivery:{" "}
-        {emailStatus === "sending" && "Sending PDF…"}
+        Email:{" "}
+        {emailStatus === "sending" && "Sending…"}
         {emailStatus === "sent" && "✓ Sent to your inbox"}
-        {emailStatus === "skipped" && "Configure RESEND_API_KEY to enable automatic email."}
-        {emailStatus === "error" && "Could not send email — use Download PDF instead."}
-        {emailStatus === "idle" && attempt?.email ? "Preparing…" : !attempt?.email ? "Session missing — download only." : null}
+        {emailStatus === "skipped" && "Set GMAIL_USER and GMAIL_APP_PASSWORD in .env.local."}
+        {emailStatus === "error" && "Could not send — download your certificate above."}
+        {emailStatus === "idle" && attempt?.email ? "Preparing…" : !attempt?.email ? "Add email on start screen next time." : null}
       </p>
 
+      {issueError ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">
+          {issueError}
+        </div>
+      ) : null}
+
       <div className="text-center">
-        <Link href="/" className="text-primary font-semibold">
+        <Link href="/" className="font-semibold text-primary">
           ← Back to home
         </Link>
       </div>

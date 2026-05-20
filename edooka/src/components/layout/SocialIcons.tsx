@@ -32,7 +32,7 @@ export function SocialIcons() {
   return (
     <div className="flex flex-wrap items-center gap-4 pt-1">
       <a
-        href={SOCIAL_LINKS.instagram}
+        href={"https://www.instagram.com/edooka.in"}
         target="_blank"
         rel="noreferrer noopener"
         className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border-default bg-white text-[#E1306C] hover:border-[#E1306C] transition-colors shadow-sm"
@@ -42,7 +42,7 @@ export function SocialIcons() {
         <InstagramIcon className="h-5 w-5" />
       </a>
       <a
-        href={SOCIAL_LINKS.facebook}
+        href={"https://www.facebook.com/edooka.in"}
         target="_blank"
         rel="noreferrer noopener"
         className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border-default bg-white text-[#1877F2] hover:border-[#1877F2] transition-colors shadow-sm"
@@ -52,7 +52,7 @@ export function SocialIcons() {
         <FacebookIcon className="h-5 w-5" />
       </a>
       <a
-        href={SOCIAL_LINKS.linkedin}
+        href={"https://www.linkedin.com/company/edooka/"}
         target="_blank"
         rel="noreferrer noopener"
         className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border-default bg-white text-[#0A66C2] hover:border-[#0A66C2] transition-colors shadow-sm"

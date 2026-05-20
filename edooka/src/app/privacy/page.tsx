@@ -30,7 +30,7 @@ export default function PrivacyPolicy() {
         <p>We share your data only with trusted partners necessary to operate our service:</p>
         <ul>
           <li><strong>Cashfree:</strong> For secure payment processing.</li>
-          <li><strong>Resend:</strong> For delivering your certificate via email.</li>
+          <li><strong>Gmail (SMTP):</strong> For delivering your certificate via email when configured.</li>
           <li><strong>Interakt:</strong> For delivering your certificate via WhatsApp.</li>
           <li><strong>Neon / Cloudflare:</strong> For secure database hosting and global content delivery.</li>
         </ul>

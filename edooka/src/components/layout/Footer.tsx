@@ -10,9 +10,11 @@ export function Footer() {
 
   return (
     <footer className="mt-16 border-t border-border-default bg-soft-orange/40">
-      <div className="mx-auto max-w-6xl px-4 py-12">
+      <div className="mx-auto max-w-6xl px-4 py-12">
+
         <div className="grid gap-10 md:grid-cols-3">
-          <div className="space-y-3">
+          <div className="space-y-3">
+
             <div className="flex items-center gap-2">
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-sm font-bold text-white">
                 e
@@ -44,7 +46,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/refund" className="text-text-secondary hover:text-primary font-medium transition-colors">
-                  Refund Scheme
+                  Refund Policy
                 </Link>
               </li>
               <li>

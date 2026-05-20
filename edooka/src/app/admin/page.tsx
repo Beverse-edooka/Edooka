@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
 
 /**
  * Page: AdminDashboard
@@ -7,18 +6,28 @@ import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
  */
 export default function AdminPage() {
   return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">Admin dashboard</h1>
-        <AdminLogoutButton />
+    <section className="w-full space-y-6">
+      <div>
+        <h1 className="text-3xl font-extrabold">Admin dashboard</h1>
+        <p className="mt-2 text-text-secondary max-w-2xl">
+          Manage assessment libraries and exam questions. Changes sync to the catalog when the database or local
+          admin file is connected.
+        </p>
       </div>
-      <p className="text-text-secondary">Manage questions and libraries from these modules.</p>
-      <div className="flex gap-3">
-        <Link href="/admin/questions" className="rounded-xl bg-primary px-4 py-2 font-semibold text-white">
-          Questions CRUD
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Link
+          href="/admin/questions"
+          className="rounded-2xl border border-border-default bg-white p-6 shadow-sm assessment-card"
+        >
+          <h2 className="text-lg font-bold">Questions CRUD</h2>
+          <p className="mt-2 text-sm text-text-secondary">Add, edit, and delete exam questions per program.</p>
         </Link>
-        <Link href="/admin/libraries" className="rounded-xl border border-border-default px-4 py-2">
-          Libraries CRUD
+        <Link
+          href="/admin/libraries"
+          className="rounded-2xl border border-border-default bg-white p-6 shadow-sm assessment-card"
+        >
+          <h2 className="text-lg font-bold">Libraries CRUD</h2>
+          <p className="mt-2 text-sm text-text-secondary">Create specialties and categories shown on the site.</p>
         </Link>
       </div>
     </section>

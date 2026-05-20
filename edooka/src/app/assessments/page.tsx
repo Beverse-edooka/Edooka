@@ -17,7 +17,7 @@ export default function AssessmentsPage() {
   }, []);
 
   return (
-    <section className="space-y-10 w-full max-w-6xl">
+    <section className="w-full space-y-8 sm:space-y-10">
       <div>
         <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
           <span className="inline-block h-2 w-2 rounded-full bg-primary" />

@@ -82,6 +82,26 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Attempt must exist before purchase (FK: purchases.attempt_id → attempts.id).
+    const [existingAttempt] = await db
+      .select()
+      .from(attempts)
+      .where(eq(attempts.id, attemptId))
+      .limit(1);
+
+    if (!existingAttempt) {
+      await db.insert(attempts).values({
+        id: attemptId,
+        userId: user.id,
+        programId: program.id,
+        questionIds: [],
+        score: body.score ?? null,
+        totalQuestions: body.total ?? program.numQuestions,
+        passed: body.passed ?? true,
+        completedAt: new Date(),
+      });
+    }
+
     let [purchase] = await db
       .select()
       .from(purchases)
@@ -102,25 +122,6 @@ export async function POST(req: NextRequest) {
           attemptId,
         })
         .returning();
-    }
-
-    const [existingAttempt] = await db
-      .select()
-      .from(attempts)
-      .where(eq(attempts.id, attemptId))
-      .limit(1);
-
-    if (!existingAttempt) {
-      await db.insert(attempts).values({
-        id: attemptId,
-        userId: user.id,
-        programId: program.id,
-        questionIds: [],
-        score: body.score ?? null,
-        totalQuestions: body.total ?? program.numQuestions,
-        passed: body.passed ?? true,
-        completedAt: new Date(),
-      });
     }
 
     await db.insert(certificates).values({

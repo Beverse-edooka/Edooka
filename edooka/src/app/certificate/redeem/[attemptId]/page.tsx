@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { pdf } from "@react-pdf/renderer";
 import { motion } from "framer-motion";
-import { CertificateDocument } from "@/components/pdf/CertificateDocument";
+import { CertificateShareButtons } from "@/components/certificate/ShareButtons";
 import { verifyUrlForCertificate } from "@/lib/app-url";
 import {
   getIssuedForAttempt,
@@ -13,12 +12,12 @@ import {
   isAttemptRedeemed,
   redeemCertificateCredit,
 } from "@/lib/certificate-wallet";
-import { getProgramBySlug } from "@/data/programs";
+import { downloadCertificatePng } from "@/lib/download-certificate";
 import { normalizeLearnerAttempt } from "@/lib/learner";
 import { EDOOKA_ATTEMPT_KEY, readLearnerProfile, type ActiveAttempt } from "@/lib/session-keys";
 
 /**
- * Page: Redeem wallet credit — free certificate download when bundle credits remain.
+ * Page: Redeem wallet credit — uses one bundle credit on entry; download does not consume again.
  */
 export default function RedeemCertificatePage() {
   const params = useParams<{ attemptId: string }>();
@@ -47,7 +46,6 @@ export default function RedeemCertificatePage() {
       if (fromDisk) loaded = normalizeLearnerAttempt(fromDisk);
     }
     setAttempt(loaded);
-    setCredits(getRemainingCredits());
     setIssuedDateLabel(
       new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })
     );
@@ -55,6 +53,7 @@ export default function RedeemCertificatePage() {
     const existing = getIssuedForAttempt(attemptId);
     if (existing) {
       setCertNumber(existing.certificateNumber);
+      setCredits(getRemainingCredits());
       return;
     }
 
@@ -63,11 +62,10 @@ export default function RedeemCertificatePage() {
       return;
     }
 
-    const program = getProgramBySlug(loaded.slug);
     const result = redeemCertificateCredit({
       attemptId,
       slug: loaded.slug,
-      programTitle: loaded.programTitle || program?.title || "Healthcare assessment",
+      programTitle: loaded.programTitle || "Healthcare assessment",
     });
 
     if (!result.ok) {
@@ -79,8 +77,33 @@ export default function RedeemCertificatePage() {
       return;
     }
 
-    setCertNumber(result.certificate.certificateNumber);
+    const issuedNumber = result.certificate.certificateNumber;
+    setCertNumber(issuedNumber);
     setCredits(getRemainingCredits());
+
+    // Persist into Postgres so the verify endpoint can resolve this cert.
+    // The redeem flow doesn't have a Cashfree order, so we synthesise one
+    // from the attempt id; the issue route upserts a purchase row off it.
+    void fetch("/api/certificate/issue", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        attemptId,
+        orderId: `wallet-${attemptId}`,
+        bundleKey: "single",
+        slug: loaded.slug,
+        certificateNumber: issuedNumber,
+        name: loaded.name,
+        email: loaded.email,
+        phone: loaded.phone,
+        programTitle: loaded.programTitle,
+        score: loaded.examScore,
+        total: loaded.examTotal,
+        passed: loaded.examPassed,
+      }),
+    }).catch(() => {
+      /* network errors surface via verify-not-found later */
+    });
   }, [attemptId]);
 
   const programTitle = attempt?.programTitle ?? "Healthcare assessment";
@@ -90,24 +113,15 @@ export default function RedeemCertificatePage() {
     [certNumber]
   );
 
-  const downloadPdf = useCallback(async () => {
+  const downloadCert = useCallback(async () => {
     if (!certNumber) return;
-    const blob = await pdf(
-      <CertificateDocument
-        recipientName={recipientName}
-        programTitle={programTitle}
-        certificateNumber={certNumber}
-        issuedDateLabel={issuedDateLabel}
-        verifyUrl={verifyUrl}
-      />
-    ).toBlob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `edooka-certificate-${certNumber}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [certNumber, recipientName, programTitle, issuedDateLabel, verifyUrl]);
+    await downloadCertificatePng({
+      fullName: recipientName,
+      courseName: programTitle,
+      certificateNumber: certNumber,
+      verifyUrl,
+    });
+  }, [certNumber, recipientName, programTitle, verifyUrl]);
 
   if (error) {
     return (
@@ -129,45 +143,46 @@ export default function RedeemCertificatePage() {
   }
 
   return (
-    <section className="mx-auto max-w-2xl space-y-8">
+    <section className="mx-auto w-full max-w-2xl space-y-6 sm:space-y-8">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="rounded-2xl border border-border-default bg-white p-8 text-center space-y-3 shadow-sm"
+        className="space-y-3 rounded-2xl border border-border-default bg-white p-6 text-center shadow-sm sm:p-8"
       >
         <p className="text-4xl">🏆</p>
         <h1 className="text-2xl font-extrabold">Certificate unlocked</h1>
         <p className="text-sm text-text-secondary">
           {isAttemptRedeemed(attemptId)
-            ? "You already issued a certificate for this attempt."
+            ? "Your certificate is ready."
             : "One credit was used from your bundle."}
         </p>
-        <p className="text-sm text-primary font-semibold">
+        <p className="text-sm font-semibold text-primary">
           {credits} credit{credits !== 1 ? "s" : ""} remaining for future exams
         </p>
-        <p className="text-xs font-mono text-text-muted">{certNumber}</p>
+        <p className="font-mono text-xs text-text-muted">{certNumber}</p>
       </motion.div>
 
-      <div className="flex flex-wrap justify-center gap-3">
+      <div className="flex flex-col items-center gap-3">
         <motion.button
           type="button"
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => void downloadPdf()}
+          onClick={() => void downloadCert()}
           className="rounded-xl bg-primary px-6 py-3 font-semibold text-white shadow"
         >
-          Download PDF
+          Download certificate
         </motion.button>
+        <CertificateShareButtons verifyUrl={verifyUrl} programTitle={programTitle} />
         <Link
           href={`/verify/${encodeURIComponent(certNumber)}`}
-          className="rounded-xl border border-border-default px-6 py-3 font-semibold card-hover"
+          className="text-sm font-semibold text-primary hover:underline"
         >
-          Verify certificate
+          Verify certificate online
         </Link>
       </div>
 
       <p className="text-center">
-        <Link href="/assessments" className="text-primary font-semibold">
+        <Link href="/assessments" className="font-semibold text-primary">
           ← Back to assessments
         </Link>
       </p>

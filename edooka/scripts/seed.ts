@@ -61,12 +61,18 @@ const PROGRAM_ROWS = [
 
 async function main() {
   for (const row of PROGRAM_ROWS) {
+    // Explicitly set num_questions/duration_minutes so we never inherit
+    // a stale legacy default (the schema previously defaulted num_questions
+    // to 18, which surfaced as "18 questions · 15 min" on the cards).
     await db.execute(sql`
-      insert into programs (slug, title, description, category, icon_name)
-      select ${row.slug}, ${row.title}, ${row.description}, ${row.category}, ${row.iconName}
+      insert into programs (slug, title, description, category, icon_name, num_questions, duration_minutes)
+      select ${row.slug}, ${row.title}, ${row.description}, ${row.category}, ${row.iconName}, 15, 15
       where not exists (select 1 from programs where slug = ${row.slug})
     `);
   }
+
+  // Realign any pre-existing rows seeded against the legacy default.
+  await db.execute(sql`update programs set num_questions = 15 where num_questions = 18`);
 
   process.stdout.write("Seed complete\n");
 }

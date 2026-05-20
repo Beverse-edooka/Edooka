@@ -15,6 +15,7 @@ const navLinks = [
 ];
 
 export function Nav() {
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
   const [copied, setCopied] = useState(false);
   const [coins, setCoins] = useState<number>(() => {
@@ -69,45 +70,81 @@ export function Nav() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-border-default bg-background/90 py-4 backdrop-blur">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
+      <header className="sticky top-0 z-50 border-b border-border-default bg-background/90 py-3 backdrop-blur sm:py-4">
+        <div className="flex items-center justify-between gap-3">
+          <Link href="/" className="flex shrink-0 items-center gap-2">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-sm font-bold text-white">
               e
             </span>
             <span className="text-lg font-bold tracking-tight">edooka</span>
           </Link>
 
-          {/* Nav links */}
-          <nav className="flex items-center gap-6 text-sm font-medium">
+          <nav className="hidden items-center gap-4 text-sm font-medium md:flex lg:gap-6">
             {navLinks.map((link) => (
-              <Link key={link.href} href={link.href} className="relative group py-1">
-                <span className="relative z-10 transition-colors group-hover:text-primary">
-                  {link.label}
-                </span>
-                {/* Animated underline */}
+              <Link key={link.href} href={link.href} className="relative group py-1 whitespace-nowrap">
+                <span className="relative z-10 transition-colors group-hover:text-primary">{link.label}</span>
                 <motion.span
-                  className="absolute bottom-0 left-0 h-0.5 bg-primary rounded-full"
+                  className="absolute bottom-0 left-0 h-0.5 rounded-full bg-primary"
                   initial={{ width: 0 }}
                   whileHover={{ width: "100%" }}
                   transition={{ duration: 0.25, ease: "easeOut" }}
                 />
               </Link>
             ))}
-
-            {/* Refer a Friend button */}
             <motion.button
+              type="button"
               onClick={() => setShowReferral(true)}
               whileHover={{ scale: 1.05, backgroundColor: "#ff6b35", color: "#ffffff" }}
               whileTap={{ scale: 0.95 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              className="rounded-full border border-primary px-4 py-1.5 text-xs font-semibold text-primary transition-colors"
+              className="rounded-full border border-primary px-3 py-1.5 text-xs font-semibold text-primary transition-colors lg:px-4"
             >
               🎁 Refer a Friend
             </motion.button>
           </nav>
+
+          <button
+            type="button"
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen((o) => !o)}
+            className="rounded-lg border border-border-default p-2 text-sm font-semibold md:hidden"
+          >
+            {mobileOpen ? "✕" : "☰"}
+          </button>
         </div>
+
+        <AnimatePresence>
+          {mobileOpen ? (
+            <motion.nav
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-3 flex flex-col gap-3 overflow-hidden border-t border-border-default pt-3 text-sm font-medium md:hidden"
+            >
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="rounded-lg px-2 py-2 hover:bg-soft-orange hover:text-primary"
+                >
+                  {link.label}
+                </Link>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileOpen(false);
+                  setShowReferral(true);
+                }}
+                className="rounded-lg border border-primary px-3 py-2 text-left text-primary"
+              >
+                🎁 Refer a Friend
+              </button>
+            </motion.nav>
+          ) : null}
+        </AnimatePresence>
       </header>
 
       {/* Referral Modal */}

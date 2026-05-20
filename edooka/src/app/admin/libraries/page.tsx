@@ -139,7 +139,7 @@ export default function AdminLibrariesPage() {
   }
 
   return (
-    <section className="space-y-6">
+    <section className="w-full space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-3xl font-bold">Libraries (programs)</h1>
         <button

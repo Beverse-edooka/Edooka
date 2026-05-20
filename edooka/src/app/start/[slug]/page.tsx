@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMemo } from "react";
-import { getProgramBySlug } from "@/data/programs";
+import { useEffect, useState } from "react";
+import { getProgramBySlug, type ProgramCard } from "@/data/programs";
 import { PASS_QUALIFY_COPY } from "@/lib/assessment-constants";
-import { useParams } from "next/navigation";
 import { EDOOKA_ATTEMPT_KEY, persistLearnerProfile, type ActiveAttempt } from "@/lib/session-keys";
 
 const schema = z.object({
@@ -23,14 +22,23 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 /**
- * Page: StartAssessment
- * Purpose: Lead capture before the timed quiz (name, email, phone).
+ * Page: StartAssessment — lead capture; program details match library/assessments catalog.
  */
 export default function StartAssessmentPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug ?? "";
   const router = useRouter();
-  const program = useMemo(() => getProgramBySlug(slug), [slug]);
+  const [program, setProgram] = useState<ProgramCard | null>(() => getProgramBySlug(slug) ?? null);
+
+  useEffect(() => {
+    fetch("/api/catalog/programs")
+      .then((r) => r.json())
+      .then((data: { programs?: ProgramCard[] }) => {
+        const match = data.programs?.find((p) => p.slug === slug);
+        if (match) setProgram(match);
+      })
+      .catch(() => {});
+  }, [slug]);
 
   const {
     register,
@@ -72,63 +80,53 @@ export default function StartAssessmentPage() {
   }
 
   return (
-    <section className="mx-auto max-w-lg space-y-8 rounded-2xl border border-border-default bg-white p-8 shadow-[0_12px_28px_rgba(255,149,88,0.18)]">
+    <section className="mx-auto w-full max-w-lg space-y-6 rounded-2xl border border-border-default bg-white p-6 shadow-[0_12px_28px_rgba(255,149,88,0.18)] sm:space-y-8 sm:p-8">
       <div className="space-y-2 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Before you begin</p>
-        <h1 className="text-2xl font-extrabold">{program.title}</h1>
-        <p className="text-sm text-text-secondary">
-          Enter your details to receive your certificate and payment confirmation by email.
+        <h1 className="text-xl font-extrabold sm:text-2xl">{program.title}</h1>
+        <p className="text-sm leading-relaxed text-text-secondary">{program.description}</p>
+        <p className="text-xs text-text-muted">
+          {program.questions} questions · {program.durationLabel} · {PASS_QUALIFY_COPY}
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="block text-sm font-semibold text-foreground">Full name</label>
+          <label className="block text-sm font-semibold">Full name</label>
           <input
             {...register("name")}
+            className="mt-1 w-full rounded-xl border border-border-default px-4 py-2.5 outline-none focus:border-primary"
             autoComplete="name"
-            className="mt-1 w-full rounded-xl border border-border-default px-4 py-3 text-foreground outline-none focus:border-primary"
-            placeholder="As it should appear on the certificate"
           />
-          {errors.name ? <p className="mt-1 text-xs text-red-600">{errors.name.message}</p> : null}
+          {errors.name ? <p className="mt-1 text-sm text-red-600">{errors.name.message}</p> : null}
         </div>
-
         <div>
-          <label className="block text-sm font-semibold text-foreground">Email</label>
+          <label className="block text-sm font-semibold">Email</label>
           <input
-            {...register("email")}
             type="email"
+            {...register("email")}
+            className="mt-1 w-full rounded-xl border border-border-default px-4 py-2.5 outline-none focus:border-primary"
             autoComplete="email"
-            className="mt-1 w-full rounded-xl border border-border-default px-4 py-3 outline-none focus:border-primary"
-            placeholder="you@hospital.org"
           />
-          {errors.email ? <p className="mt-1 text-xs text-red-600">{errors.email.message}</p> : null}
+          {errors.email ? <p className="mt-1 text-sm text-red-600">{errors.email.message}</p> : null}
         </div>
-
         <div>
-          <label className="block text-sm font-semibold text-foreground">Phone</label>
+          <label className="block text-sm font-semibold">Phone</label>
           <input
             {...register("phone")}
-            type="tel"
+            className="mt-1 w-full rounded-xl border border-border-default px-4 py-2.5 outline-none focus:border-primary"
             autoComplete="tel"
-            className="mt-1 w-full rounded-xl border border-border-default px-4 py-3 outline-none focus:border-primary"
-            placeholder="+91 ..."
           />
-          {errors.phone ? <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p> : null}
+          {errors.phone ? <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p> : null}
         </div>
-
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded-xl bg-primary py-3 font-semibold text-white shadow hover:bg-primary-hover disabled:opacity-60 transition-colors"
+          className="w-full rounded-xl bg-primary py-3 font-semibold text-white hover:bg-primary-hover disabled:opacity-50"
         >
-          Continue to assessment →
+          {isSubmitting ? "Starting…" : "Start assessment →"}
         </button>
       </form>
-
-      <p className="text-center text-xs text-text-muted">
-        {program.questions} questions · {program.durationLabel} · {PASS_QUALIFY_COPY}
-      </p>
     </section>
   );
 }

@@ -24,9 +24,9 @@ export default function RootLayout({
       <body
         className={`${inter.className} min-h-screen w-full bg-background text-text-primary antialiased`}
       >
-        <div className="flex min-h-screen w-full flex-col px-4 md:px-8 lg:px-12">
+        <div className="flex min-h-screen w-full flex-col px-4 sm:px-6 md:px-8 lg:px-12">
           <Nav />
-          <main className="flex flex-1 flex-col items-center py-8 w-full">{children}</main>
+          <main className="page-main flex flex-1 flex-col py-6 md:py-8">{children}</main>
           <Footer />
         </div>
       </body>
