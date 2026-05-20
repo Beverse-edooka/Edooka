@@ -12,6 +12,8 @@ import {
   PASS_QUALIFY_COPY,
 } from "@/lib/assessment-constants";
 import { COMPANY_NAME } from "@/lib/site";
+import { CertificateShareButtons } from "@/components/certificate/ShareButtons";
+import { verifyUrlForCertificate } from "@/lib/app-url";
 import {
   getIssuedForAttempt,
   getRemainingCredits,
@@ -251,6 +253,11 @@ export default function ResultPage() {
                   >
                     Download certificate again
                   </Link>
+                  <CertificateShareButtons
+                    verifyUrl={verifyUrlForCertificate(issuedCert.certificateNumber)}
+                    programTitle={courseTitle}
+                    className="pt-2"
+                  />
                 </>
               ) : walletCredits > 0 ? (
                 <>

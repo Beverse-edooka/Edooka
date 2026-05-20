@@ -229,8 +229,8 @@ export default function QuizPage() {
   }
 
   return (
-    <section className="mx-auto max-w-3xl space-y-6 rounded-2xl border border-border-default bg-white p-6 shadow-[0_10px_28px_rgba(255,149,88,0.22)]">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <section className="mx-auto flex max-h-[min(100dvh-6rem,820px)] w-full max-w-3xl flex-col gap-3 rounded-2xl border border-border-default bg-white p-4 shadow-[0_10px_28px_rgba(255,149,88,0.22)] sm:gap-4 sm:p-5">
+      <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">{quizProgram.title}</p>
           <p className="text-xs text-text-muted capitalize">{quizProgram.category}</p>
@@ -286,24 +286,28 @@ export default function QuizPage() {
         <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${progress}%` }} />
       </div>
 
-      <h1 className="text-2xl font-bold">{current.questionText}</h1>
+      <h1 className="shrink-0 text-base font-bold leading-snug line-clamp-4 sm:text-lg md:text-xl">
+        {current.questionText}
+      </h1>
 
-      <div className="grid gap-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-1 pt-2 pb-3 -mx-1">
+        <div className="grid gap-2 sm:gap-3">
         {current.options.map((option, optionIndex) => (
           <button
             key={`${current.id}-${optionIndex}`}
             type="button"
             onClick={() => handleAnswer(optionIndex)}
             disabled={answered}
-            className="card-hover rounded-xl border border-border-default bg-white p-4 text-left transition disabled:opacity-60 disabled:cursor-not-allowed"
+            className="card-hover rounded-xl border border-border-default bg-white p-3 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-60 sm:p-3.5 sm:text-base"
           >
             <span className="mr-2 font-bold text-primary">{String.fromCharCode(65 + optionIndex)}.</span>
             {option}
           </button>
         ))}
+        </div>
       </div>
 
-      <p className="text-center text-xs text-text-muted">
+      <p className="shrink-0 text-center text-[10px] text-text-muted sm:text-xs">
         Each question has a 1-minute time limit. Unanswered questions are skipped automatically.
       </p>
     </section>

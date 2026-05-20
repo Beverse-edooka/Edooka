@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProgramCardArticle } from "@/components/assessment/ProgramCard";
-import { getProgramCategories, PROGRAMS, type ProgramCard } from "@/data/programs";
+import type { ProgramCard } from "@/data/programs";
+import { useCatalogPrograms } from "@/hooks/use-catalog-programs";
 
 type Props = {
   showStart?: boolean;
@@ -12,18 +14,15 @@ type Props = {
 };
 
 export function AssessmentsGrid({ showStart = true, trendingLimit, showViewMore = false }: Props) {
-  const categories = useMemo(() => getProgramCategories(), []);
+  const { programs: catalog } = useCatalogPrograms();
+  const categories = useMemo(
+    () => [...new Set(catalog.map((p) => p.category))].sort((a, b) => a.localeCompare(b)),
+    [catalog]
+  );
   const [filter, setFilter] = useState<string>("All");
-  const [showAll, setShowAll] = useState(false);
-
-  useEffect(() => {
-    setTimeout(() => {
-      setShowAll(false);
-    }, 0);
-  }, [filter]);
 
   const filtered: ProgramCard[] =
-    filter === "All" ? PROGRAMS : PROGRAMS.filter((p) => p.category === filter);
+    filter === "All" ? catalog : catalog.filter((p) => p.category === filter);
 
   const sorted = useMemo(() => {
     const trending = filtered.filter((a) => a.badge === "Trending");
@@ -32,7 +31,7 @@ export function AssessmentsGrid({ showStart = true, trendingLimit, showViewMore 
   }, [filtered]);
 
   const visible =
-    showViewMore && trendingLimit && !showAll ? sorted.slice(0, trendingLimit) : sorted;
+    showViewMore && trendingLimit ? sorted.slice(0, trendingLimit) : sorted;
 
   return (
     <div className="space-y-6">
@@ -56,12 +55,13 @@ export function AssessmentsGrid({ showStart = true, trendingLimit, showViewMore 
       {filtered.length === 0 ? (
         <p className="text-sm text-text-muted">No assessments in this category yet.</p>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid auto-rows-fr gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <AnimatePresence mode="popLayout">
             {visible.map((item, i) => (
               <motion.div
                 key={item.slug}
                 layout
+                className="h-full"
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
@@ -76,13 +76,12 @@ export function AssessmentsGrid({ showStart = true, trendingLimit, showViewMore 
 
       {showViewMore && trendingLimit && sorted.length > trendingLimit ? (
         <div className="flex justify-center pt-2">
-          <button
-            type="button"
-            onClick={() => setShowAll((s) => !s)}
+          <Link
+            href="/library"
             className="rounded-full border-2 border-primary px-8 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary hover:text-white"
           >
-            {showAll ? "Show less ↑" : `View more (${sorted.length - trendingLimit} more) ↓`}
-          </button>
+            View more ({sorted.length - trendingLimit} more) →
+          </Link>
         </div>
       ) : null}
     </div>

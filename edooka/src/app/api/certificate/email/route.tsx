@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { renderToBuffer } from "@react-pdf/renderer";
-import { Resend } from "resend";
-import { CertificateDocument } from "@/components/pdf/CertificateDocument";
 import { verifyUrlForCertificate } from "@/lib/app-url";
+import { buildCertificateEmailHtml, sendMail } from "@/lib/email";
+import { renderCertificatePng } from "@/lib/certificate-template";
 
 export const runtime = "nodejs";
 
 /**
- * POST /api/certificate/email
- * Sends the PDF certificate to the learner after successful payment (Resend).
+ * POST /api/certificate/email — Gmail SMTP + template PNG attachment (no Resend / cloud).
  */
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL ?? "certificates@edooka.in";
-
   let body: {
     email?: string;
     recipientName?: string;
     programTitle?: string;
     certificateNumber?: string;
     issuedDateLabel?: string;
+    verifyUrl?: string;
   };
   try {
     body = await req.json();
@@ -35,48 +31,51 @@ export async function POST(req: NextRequest) {
   const recipientName = body.recipientName?.trim() ?? "Learner";
   const programTitle = body.programTitle?.trim() ?? "Assessment";
   const certificateNumber = body.certificateNumber?.trim() ?? "EDK-PENDING";
-  const issuedDateLabel =
-    body.issuedDateLabel ??
-    new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" });
+  const verifyUrl = body.verifyUrl?.trim() || verifyUrlForCertificate(certificateNumber);
 
-  const verifyUrl = verifyUrlForCertificate(certificateNumber);
+  const html = buildCertificateEmailHtml({
+    fullName: recipientName,
+    courseName: programTitle,
+    certificateNumber,
+    verifyUrl,
+  });
 
-  const pdfBuffer = await renderToBuffer(
-    <CertificateDocument
-      recipientName={recipientName}
-      programTitle={programTitle}
-      certificateNumber={certificateNumber}
-      issuedDateLabel={issuedDateLabel}
-      verifyUrl={verifyUrl}
-    />
-  );
-
-  if (!apiKey) {
+  let pngBuffer: Buffer;
+  try {
+    pngBuffer = await renderCertificatePng({
+      fullName: recipientName,
+      courseName: programTitle,
+      certificateNumber,
+      verifyUrl,
+    });
+  } catch (e) {
     return NextResponse.json(
-      {
-        skipped: true,
-        message: "RESEND_API_KEY not configured; PDF generated but email not sent.",
-      },
-      { status: 200 }
+      { error: e instanceof Error ? e.message : "Certificate render failed" },
+      { status: 500 }
     );
   }
 
-  const resend = new Resend(apiKey);
-  const { error } = await resend.emails.send({
-    from,
+  const result = await sendMail({
     to: email,
     subject: `Your edooka certificate — ${programTitle}`,
-    html: `<p>Hi ${recipientName},</p><p>Congratulations on earning your certificate. Your PDF is attached.</p><p>Certificate number: <strong>${certificateNumber}</strong></p>`,
+    html,
     attachments: [
       {
-        filename: `edooka-certificate-${certificateNumber}.pdf`,
-        content: pdfBuffer,
+        filename: `edooka-certificate-${certificateNumber}.png`,
+        content: pngBuffer,
+        contentType: "image/png",
       },
     ],
   });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 502 });
+  if ("error" in result) {
+    return NextResponse.json(
+      {
+        skipped: true,
+        message: `${result.error}. Set GMAIL_USER and GMAIL_APP_PASSWORD in .env.local.`,
+      },
+      { status: 200 }
+    );
   }
 
   return NextResponse.json({ ok: true });

@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProgramBySlug } from "@/data/programs";
+import { mapDbProgramToCard } from "@/lib/catalog-map";
 import { minCorrectToPass, PASS_QUALIFY_COPY } from "@/lib/assessment-constants";
+import { getActiveProgramBySlug } from "@/server/queries/programs";
 
 /**
- * Page: ProgramDetail
- * Purpose: Assessment detail from static catalog (no database required).
+ * Page: ProgramDetail — same description as library/assessments (DB first, static fallback).
  */
 export default async function ProgramDetailPage({
   params,
@@ -13,28 +14,27 @@ export default async function ProgramDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const program = getProgramBySlug(slug);
+  const dbRow = await getActiveProgramBySlug(slug);
+  const program = dbRow ? mapDbProgramToCard(dbRow) : getProgramBySlug(slug);
 
   if (!program) notFound();
 
   return (
-    <section className="grid gap-6 md:grid-cols-[1fr_320px]">
+    <section className="grid w-full gap-6 lg:grid-cols-[1fr_320px]">
       <article className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          {program.category}
-        </p>
-        <h1 className="text-3xl font-bold">{program.title}</h1>
-        <p className="text-text-secondary leading-relaxed">{program.description}</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">{program.category}</p>
+        <h1 className="text-2xl font-bold sm:text-3xl">{program.title}</h1>
+        <p className="leading-relaxed text-text-secondary">{program.description}</p>
         <div className="pt-4">
           <Link
             href={`/start/${program.slug}`}
-            className="inline-flex rounded-xl bg-primary px-6 py-3 font-semibold text-white shadow hover:bg-primary-hover transition-colors"
+            className="inline-flex rounded-xl bg-primary px-6 py-3 font-semibold text-white shadow transition-colors hover:bg-primary-hover"
           >
             Start free assessment →
           </Link>
         </div>
       </article>
-      <aside className="h-fit rounded-2xl border border-border-default bg-white p-4 space-y-3">
+      <aside className="h-fit space-y-3 rounded-2xl border border-border-default bg-white p-4">
         <h2 className="text-lg font-semibold">Free assessment</h2>
         <p className="text-sm text-text-muted">
           Questions: {program.questions} · Estimated time: {program.durationLabel}

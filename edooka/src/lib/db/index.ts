@@ -6,11 +6,13 @@ import { rewriteSupabaseDbUrlIfNeeded } from "./rewrite-supabase-url";
 /**
  * File: db client
  * Purpose: Creates a shared Drizzle client for server-side data access.
+ *
+ * Neon: use the *pooled* connection string from the dashboard (host contains `-pooler`)
+ * to avoid 2–3s cold connects on serverless routes.
  */
 function resolveConnectionString(): string {
   const fromEnv = process.env.DATABASE_URL?.trim();
   if (fromEnv) return rewriteSupabaseDbUrlIfNeeded(fromEnv);
-  // `next build` evaluates modules without a real DB; avoid failing at import time.
   if (process.env.NEXT_PHASE === "phase-production-build") {
     return "postgresql://build:build@127.0.0.1:5432/build";
   }
@@ -22,6 +24,11 @@ function resolveConnectionString(): string {
   );
 }
 
-const client = postgres(resolveConnectionString(), { prepare: false });
+const client = postgres(resolveConnectionString(), {
+  prepare: false,
+  max: 10,
+  idle_timeout: 20,
+  connect_timeout: 15,
+});
 
 export const db = drizzle(client, { schema });

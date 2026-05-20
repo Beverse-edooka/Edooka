@@ -119,6 +119,11 @@ export const certificates = pgTable("certificates", {
     .notNull()
     .references(() => purchases.id),
   certificateNumber: text("certificate_number").notNull().unique(),
+  // Random hard-to-guess token encoded in the QR code. Optional for
+  // backward compatibility with existing rows. The verify API accepts
+  // either `certificateNumber` or `qrToken`.
+  qrToken: text("qr_token").unique(),
+  revoked: boolean("revoked").notNull().default(false),
   pdfUrl: text("pdf_url").notNull(),
   verificationUrl: text("verification_url").notNull(),
   issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
