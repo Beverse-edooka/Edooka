@@ -1,4 +1,11 @@
 {
+  "name": "edooka-monorepo-root",
+  "private": true,
+  "scripts": {
+    "build": "cd edooka && npm ci && npm run build",
+    "start": "cd edooka && npm run start",
+    "dev": "cd edooka && npm run dev"
+  },
   "dependencies": {
     "drizzle-orm": "^0.45.2"
   },
