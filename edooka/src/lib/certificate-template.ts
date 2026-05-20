@@ -29,18 +29,19 @@ const POS = {
   courseStartFrac: 0.024,
   courseMinPx: 12,
 
-  // QR target: the dashed square on the left-middle of the template.
-  qrXFrac: 0.082,
+  // QR target: exactly fills the dashed square placeholder.
+  // Probed dashed bounds: x:0.080..0.207, y:0.615..0.815.
+  qrXFrac: 0.080,
   qrYFrac: 0.615,
-  qrSizeFrac: 0.135,
+  qrSizeFrac: 0.127,
 
   // Certificate ID lives inside the "Enter Certificate ID" input box.
-  // The box on the template has a baked-in placeholder we paint over.
+  // Probed interior bounds: x:0.058..0.234, y:0.862..0.914.
   idBoxXFrac: 0.058,
   idBoxYFrac: 0.862,
   idBoxWFrac: 0.176,
   idBoxHFrac: 0.052,
-  idSizeFrac: 0.015,
+  idSizeFrac: 0.0165,
 } as const;
 
 const NAVY = "#0f1e44";
@@ -84,27 +85,54 @@ export async function renderCertificatePng(input: CertificateRenderInput): Promi
     POS.courseMinPx,
   );
 
-  // Certificate ID — wipe the "Enter Certificate ID" placeholder baked
-  // into the template, then center the real number inside the input box.
+  // Certificate ID — paint a tiny "ink-out" rect using the input field's
+  // ACTUAL interior color sampled from the template, sized to just the
+  // placeholder glyphs. This hides the baked-in "Enter Certificate ID"
+  // text without creating a visible white box.
   const idBoxX = Math.floor(W * POS.idBoxXFrac);
   const idBoxY = Math.floor(H * POS.idBoxYFrac);
   const idBoxW = Math.floor(W * POS.idBoxWFrac);
   const idBoxH = Math.floor(H * POS.idBoxHFrac);
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(idBoxX + 2, idBoxY + 2, idBoxW - 4, idBoxH - 4);
+  const idFontSize = Math.max(12, Math.floor(W * POS.idSizeFrac));
+  const idCenterX = idBoxX + idBoxW / 2;
+  const idCenterY = idBoxY + idBoxH / 2;
+
+  // Sample the field interior color a few px above/below the placeholder
+  // text band; that area is uniform input-field background.
+  const fieldBg = sampleAverageColor(ctx, [
+    [idCenterX, idBoxY + 4],
+    [idCenterX, idBoxY + idBoxH - 4],
+    [idBoxX + 6, idCenterY],
+    [idBoxX + idBoxW - 6, idCenterY],
+  ]);
+
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = NAVY;
-  ctx.font = `700 ${Math.max(12, Math.floor(W * POS.idSizeFrac))}px "Courier New", monospace`;
-  ctx.fillText(input.certificateNumber, idBoxX + idBoxW / 2, idBoxY + idBoxH / 2);
+  ctx.font = `700 ${idFontSize}px "Courier New", monospace`;
 
-  // QR code: white quiet-zone first, then the QR itself.
+  const certIdMetrics = ctx.measureText(input.certificateNumber);
+  const placeholderMetrics = ctx.measureText("Enter Certificate ID");
+  const wipeWidth = Math.min(
+    idBoxW - 8,
+    Math.ceil(Math.max(certIdMetrics.width, placeholderMetrics.width)) + 6,
+  );
+  const wipeHeight = Math.ceil(idFontSize * 1.05);
+  ctx.fillStyle = fieldBg;
+  ctx.fillRect(
+    Math.floor(idCenterX - wipeWidth / 2),
+    Math.floor(idCenterY - wipeHeight / 2),
+    wipeWidth,
+    wipeHeight,
+  );
+
+  ctx.fillStyle = NAVY;
+  ctx.fillText(input.certificateNumber, idCenterX, idCenterY);
+
+  // QR code: drawn directly inside the dashed placeholder box. The QR's
+  // own white modules act as its quiet zone — no extra wipe rectangle.
   const qrSize = Math.floor(W * POS.qrSizeFrac);
   const qrX = Math.floor(W * POS.qrXFrac);
   const qrY = Math.floor(H * POS.qrYFrac);
-  const pad = Math.max(4, Math.floor(qrSize * 0.06));
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(qrX - pad, qrY - pad, qrSize + pad * 2, qrSize + pad * 2);
 
   const qrDataUrl = await QRCode.toDataURL(input.verifyUrl, {
     width: qrSize * 3,
@@ -135,4 +163,21 @@ function drawFittedCenterText(
     ctx.font = fontFor(size);
   }
   ctx.fillText(text, x, y);
+}
+
+function sampleAverageColor(
+  ctx: ReturnType<ReturnType<typeof createCanvas>["getContext"]>,
+  points: ReadonlyArray<readonly [number, number]>,
+): string {
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  for (const [x, y] of points) {
+    const px = ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data;
+    r += px[0];
+    g += px[1];
+    b += px[2];
+  }
+  const n = Math.max(1, points.length);
+  return `rgb(${Math.round(r / n)}, ${Math.round(g / n)}, ${Math.round(b / n)})`;
 }
