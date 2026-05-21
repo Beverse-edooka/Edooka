@@ -84,6 +84,8 @@ curl -s "$BASE/api/referral/coins?referralCode=$CODE" | jq .
 
 ## Certificate (DB-backed PNG)
 
+**If the PNG shows only the blank template** (no name, course, ID, or QR), the server could not draw text — usually missing fonts on Linux/Vercel. The app bundles `dejavu-fonts-ttf` and registers them at render time; redeploy after pulling the latest `main`.
+
 After a real certificate is issued (payment or redeem), open or download:
 
 ```
