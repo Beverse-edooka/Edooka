@@ -17,11 +17,9 @@ export const CERT_FONTS = {
 
 let registered = false;
 
-/** Project root on Vercel is usually `edooka/`; monorepo local dev may be repo root. */
 function projectRoots(): string[] {
   const cwd = process.cwd();
-  const roots = [cwd, join(cwd, "edooka")];
-  return [...new Set(roots)];
+  return [...new Set([cwd, join(cwd, "edooka")])];
 }
 
 function resolveBundledFile(...segments: string[]): string | null {
@@ -32,24 +30,31 @@ function resolveBundledFile(...segments: string[]): string | null {
   return null;
 }
 
-/** Register DejaVu TTFs from node_modules (required on Linux serverless — no Arial/Georgia). */
+function fontDir(): string {
+  return (
+    resolveBundledFile("public", "fonts") ??
+    resolveBundledFile("node_modules", "dejavu-fonts-ttf", "ttf")
+  );
+}
+
+/** Register DejaVu TTFs (required on Linux serverless — no Arial/Georgia). */
 export function ensureCertificateFontsRegistered(): void {
   if (registered) return;
 
-  const ttfDir = resolveBundledFile("node_modules", "dejavu-fonts-ttf", "ttf");
+  const ttfDir = fontDir();
   if (!ttfDir) {
     throw new Error(
-      "Certificate fonts missing. Run npm install (dejavu-fonts-ttf) and redeploy."
+      "Certificate fonts missing. Run npm install && npm run postinstall, then redeploy."
     );
   }
 
   const register = (file: string, family: string) => {
-    const path = join(ttfDir, file);
-    if (!existsSync(path)) {
-      throw new Error(`Certificate font file not found: ${path}`);
+    const fontPath = join(ttfDir, file);
+    if (!existsSync(fontPath)) {
+      throw new Error(`Certificate font file not found: ${fontPath}`);
     }
-    if (!GlobalFonts.registerFromPath(path, family)) {
-      throw new Error(`Could not register font ${family} from ${path}`);
+    if (!GlobalFonts.registerFromPath(fontPath, family)) {
+      throw new Error(`Could not register font ${family} from ${fontPath}`);
     }
   };
 
@@ -62,11 +67,11 @@ export function ensureCertificateFontsRegistered(): void {
 }
 
 export function resolveCertificateTemplatePath(): string {
-  const path = resolveBundledFile("public", "certificate-template.png");
-  if (!path) {
+  const templatePath = resolveBundledFile("public", "certificate-template.png");
+  if (!templatePath) {
     throw new Error(
       "certificate-template.png missing under public/. Commit the file and redeploy."
     );
   }
-  return path;
+  return templatePath;
 }

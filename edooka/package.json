@@ -13,6 +13,7 @@
     "db:push": "drizzle-kit push",
     "seed": "tsx scripts/seed.ts",
     "db:setup": "drizzle-kit push && tsx scripts/seed.ts",
+    "postinstall": "node scripts/copy-certificate-fonts.mjs",
     "db:diag": "tsx scripts/diagnose-db.ts"
   },
   "dependencies": {

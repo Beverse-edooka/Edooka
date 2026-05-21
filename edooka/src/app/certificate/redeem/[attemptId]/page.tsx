@@ -14,6 +14,7 @@ import {
 } from "@/lib/certificate-wallet";
 import { downloadCertificatePng } from "@/lib/download-certificate";
 import { normalizeLearnerAttempt } from "@/lib/learner";
+import { persistCertificateIssue } from "@/lib/persist-certificate-issue";
 import { EDOOKA_ATTEMPT_KEY, readLearnerProfile, type ActiveAttempt } from "@/lib/session-keys";
 
 /**
@@ -28,11 +29,13 @@ export default function RedeemCertificatePage() {
   const [certNumber, setCertNumber] = useState<string | null>(null);
   const [issuedVerifyUrl, setIssuedVerifyUrl] = useState("");
   const [dbReady, setDbReady] = useState(false);
+  const [registerError, setRegisterError] = useState("");
   const [error, setError] = useState("");
   const [issuedDateLabel, setIssuedDateLabel] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     let loaded: ActiveAttempt | null = null;
     const raw = sessionStorage.getItem(EDOOKA_ATTEMPT_KEY);
     if (raw) {
@@ -52,85 +55,100 @@ export default function RedeemCertificatePage() {
       new Date().toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })
     );
 
-    const existing = getIssuedForAttempt(attemptId);
-    if (existing) {
-      setCertNumber(existing.certificateNumber);
-      setCredits(getRemainingCredits());
-      setDbReady(true);
-      return;
-    }
+    let cancelled = false;
 
-    if (!loaded) {
-      setError("Session not found. Complete the assessment again.");
-      return;
-    }
-
-    const result = redeemCertificateCredit({
-      attemptId,
-      slug: loaded.slug,
-      programTitle: loaded.programTitle || "Healthcare assessment",
-    });
-
-    if (!result.ok) {
-      setError(
-        result.reason === "no_credits"
-          ? "No certificate credits left. Purchase a package to download."
-          : "Could not issue certificate."
-      );
-      return;
-    }
-
-    const issuedNumber = result.certificate.certificateNumber;
-    setCertNumber(issuedNumber);
-    setCredits(getRemainingCredits());
-
-    // Persist into Postgres so the verify endpoint can resolve this cert.
-    // The redeem flow doesn't have a Cashfree order, so we synthesise one
-    // from the attempt id; the issue route upserts a purchase row off it.
     void (async () => {
-      try {
-        const res = await fetch("/api/certificate/issue", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            attemptId,
-            orderId: `wallet-${attemptId}`,
-            bundleKey: "single",
-            slug: loaded.slug,
-            certificateNumber: issuedNumber,
-            name: loaded.name,
-            email: loaded.email,
-            phone: loaded.phone,
-            programTitle: loaded.programTitle,
-            score: loaded.examScore,
-            total: loaded.examTotal,
-            passed: loaded.examPassed,
-          }),
-        });
-        if (res.ok) {
-          const data = (await res.json()) as { verifyUrl?: string };
-          if (data.verifyUrl) setIssuedVerifyUrl(data.verifyUrl);
+      const existing = getIssuedForAttempt(attemptId);
+      let issuedNumber: string;
+
+      if (existing) {
+        issuedNumber = existing.certificateNumber;
+        if (!cancelled) {
+          setCertNumber(issuedNumber);
+          setCredits(getRemainingCredits());
         }
-      } catch {
-        /* network errors surface via verify-not-found later */
-      } finally {
-        setDbReady(true);
+      } else {
+        if (!loaded) {
+          if (!cancelled) setError("Session not found. Complete the assessment again.");
+          return;
+        }
+
+        const result = redeemCertificateCredit({
+          attemptId,
+          slug: loaded.slug,
+          programTitle: loaded.programTitle || "Healthcare assessment",
+        });
+
+        if (!result.ok) {
+          if (!cancelled) {
+            setError(
+              result.reason === "no_credits"
+                ? "No certificate credits left. Purchase a package to download."
+                : "Could not issue certificate."
+            );
+          }
+          return;
+        }
+
+        issuedNumber = result.certificate.certificateNumber;
+        if (!cancelled) {
+          setCertNumber(issuedNumber);
+          setCredits(getRemainingCredits());
+        }
       }
+
+      if (!loaded) {
+        if (!cancelled) {
+          setRegisterError(
+            "Learner profile not found in this browser. Open the assessment again, then return here to download."
+          );
+          setDbReady(false);
+        }
+        return;
+      }
+
+      const persisted = await persistCertificateIssue({
+        attempt: loaded,
+        certificateNumber: issuedNumber,
+        orderId: `wallet-${attemptId}`,
+      });
+
+      if (cancelled) return;
+
+      if (!persisted.ok) {
+        setRegisterError(persisted.error);
+        setDbReady(false);
+        return;
+      }
+
+      if (persisted.verifyUrl) setIssuedVerifyUrl(persisted.verifyUrl);
+      setRegisterError("");
+      setDbReady(true);
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [attemptId]);
 
   const programTitle = attempt?.programTitle ?? "Healthcare assessment";
-  const recipientName = attempt?.name ?? "Learner";
   const verifyUrl = useMemo(
     () => issuedVerifyUrl || (certNumber ? verifyUrlForCertificate(certNumber) : ""),
     [certNumber, issuedVerifyUrl]
   );
 
   const downloadCert = useCallback(async () => {
-    if (!certNumber) return;
-    await downloadCertificatePng({ certificateNumber: certNumber });
-    // Server-side referral award on certificate download path (idempotent).
-    if (attempt?.referredBy && attempt.email) {
+    if (!certNumber || !attempt) return;
+    await downloadCertificatePng({
+      certificateNumber: certNumber,
+      fallback: {
+        fullName: attempt.name,
+        courseName: programTitle,
+        certificateNumber: certNumber,
+        verifyUrl: verifyUrl || verifyUrlForCertificate(certNumber),
+      },
+    });
+    if (attempt.referredBy && attempt.email) {
       void fetch("/api/referral/award", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -142,7 +160,7 @@ export default function RedeemCertificatePage() {
         }),
       }).catch(() => {});
     }
-  }, [attempt?.email, attempt?.referredBy, certNumber]);
+  }, [attempt, certNumber, programTitle, verifyUrl]);
 
   if (error) {
     return (
@@ -151,7 +169,7 @@ export default function RedeemCertificatePage() {
         <p className="text-text-secondary">{error}</p>
         <Link
           href={`/result/${attemptId}/pricing`}
-          className="inline-flex rounded-xl bg-primary px-6 py-3 font-semibold text-white"
+          className="rounded-xl bg-primary px-6 py-3 font-semibold text-white"
         >
           View pricing
         </Link>
@@ -183,13 +201,19 @@ export default function RedeemCertificatePage() {
         <p className="font-mono text-xs text-text-muted">{certNumber}</p>
       </motion.div>
 
+      {registerError ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-900">
+          {registerError}
+        </div>
+      ) : null}
+
       <div className="flex flex-col items-center gap-3">
         <motion.button
           type="button"
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.98 }}
           disabled={!dbReady}
-          onClick={() => void downloadCert()}
+          onClick={() => void downloadCert().catch((e) => setRegisterError(e instanceof Error ? e.message : "Download failed"))}
           className="rounded-xl bg-primary px-6 py-3 font-semibold text-white shadow disabled:opacity-50"
         >
           {dbReady ? "Download certificate" : "Registering certificate…"}

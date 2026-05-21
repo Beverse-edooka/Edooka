@@ -210,8 +210,16 @@ function SuccessInner() {
 
   const downloadCert = useCallback(async () => {
     if (!certNumber) return;
-    await downloadCertificatePng({ certificateNumber: certNumber });
-  }, [certNumber]);
+    await downloadCertificatePng({
+      certificateNumber: certNumber,
+      fallback: {
+        fullName: recipientName,
+        courseName: programTitle,
+        certificateNumber: certNumber,
+        verifyUrl: verifyUrl || verifyUrlForCertificate(certNumber),
+      },
+    });
+  }, [certNumber, recipientName, programTitle, verifyUrl]);
 
   return (
     <section className="mx-auto w-full max-w-2xl space-y-6 sm:space-y-8">

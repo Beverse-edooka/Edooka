@@ -1,3 +1,4 @@
+import { verifyUrlForCertificate } from "@/lib/app-url";
 import { db } from "@/lib/db";
 import { certificates, programs, users } from "@/lib/db/schema";
 import type { CertificateRenderInput } from "@/lib/certificate-template";
@@ -21,10 +22,14 @@ export async function getCertificateRenderInputFromDb(
   if (!row) return null;
 
   const { cert, user, program } = row;
+  const verifyUrl =
+    cert.verificationUrl?.trim() ||
+    verifyUrlForCertificate(cert.qrToken ?? cert.certificateNumber);
+
   return {
     fullName: user.name,
     courseName: program.title,
     certificateNumber: cert.certificateNumber,
-    verifyUrl: cert.verificationUrl,
+    verifyUrl,
   };
 }
