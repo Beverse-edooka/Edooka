@@ -32,6 +32,15 @@ function cashfreeCheckoutBase(env: "sandbox" | "production"): string {
   return env === "production" ? "https://payments.cashfree.com" : "https://sandbox.cashfree.com";
 }
 
+/** Cashfree: customer_id must be alphanumeric plus _ and - only (no @ or dots). */
+function cashfreeCustomerId(attemptId: string, email: string): string {
+  const fromAttempt = attemptId.replace(/[^a-zA-Z0-9_-]/g, "");
+  if (fromAttempt.length >= 3) return fromAttempt.slice(0, 50);
+  const localPart = email.split("@")[0]?.replace(/[^a-zA-Z0-9_-]/g, "") ?? "";
+  if (localPart.length >= 3) return localPart.slice(0, 50);
+  return `cust_${Date.now()}`.slice(0, 50);
+}
+
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
   if (digits.length >= 10) {
@@ -109,7 +118,7 @@ export async function createCashfreeOrder(
         order_amount: tier.priceInr,
         order_currency: "INR",
         customer_details: {
-          customer_id: (email.replace(/[^a-zA-Z0-9@._-]/g, "").slice(0, 50) || "customer"),
+          customer_id: cashfreeCustomerId(input.attemptId, email),
           customer_email: email,
           customer_phone: phone,
           customer_name: name,

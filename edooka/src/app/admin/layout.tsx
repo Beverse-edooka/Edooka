@@ -6,7 +6,7 @@ import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
  */
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full min-w-0 max-w-full space-y-6">
       <header className="flex flex-col gap-4 border-b border-border-default pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3 text-sm font-medium">
           <Link href="/admin" className="font-bold text-foreground hover:text-primary">
@@ -22,7 +22,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
         <AdminLogoutButton />
       </header>
-      <div className="w-full">{children}</div>
+      <div className="w-full min-w-0 max-w-full">{children}</div>
     </div>
   );
 }
