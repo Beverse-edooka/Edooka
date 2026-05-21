@@ -30,7 +30,7 @@ function resolveBundledFile(...segments: string[]): string | null {
   return null;
 }
 
-function fontDir(): string {
+function fontDir(): string | null {
   return (
     resolveBundledFile("public", "fonts") ??
     resolveBundledFile("node_modules", "dejavu-fonts-ttf", "ttf")
