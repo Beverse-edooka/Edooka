@@ -16,6 +16,7 @@ import {
 import { downloadCertificatePng } from "@/lib/download-certificate";
 import { getCertificateCountForBundle } from "@/lib/pricing";
 import { normalizeLearnerAttempt } from "@/lib/learner";
+import { persistCertificateIssue } from "@/lib/persist-certificate-issue";
 import { EDOOKA_ATTEMPT_KEY, readLearnerProfile, type ActiveAttempt } from "@/lib/session-keys";
 
 function SuccessInner() {
@@ -68,28 +69,39 @@ function SuccessInner() {
     if (!attemptId || !attempt.slug) return;
 
     const flagKey = `edooka_fulfilled_${params.purchaseId}`;
-    if (sessionStorage.getItem(flagKey)) {
+    const alreadyFulfilled = sessionStorage.getItem(flagKey);
+
+    let number: string;
+    if (alreadyFulfilled) {
       const issued = getIssuedForAttempt(attemptId);
-      const existing = issued?.certificateNumber ?? certificateNumberForAttempt(attemptId);
-      setTimeout(() => {
-        setCertNumber(existing);
-        setRemainingCredits(getRemainingCredits());
-        setFulfillmentDone(true);
-      }, 0);
-      return;
+      number = issued?.certificateNumber ?? certificateNumberForAttempt(attemptId);
+    } else {
+      addCreditsFromPurchase(params.purchaseId, certificateCredits);
+      const redeem = redeemCertificateCredit({
+        attemptId,
+        slug: attempt.slug,
+        programTitle,
+        purchaseId: params.purchaseId,
+      });
+      number = redeem.ok
+        ? redeem.certificate.certificateNumber
+        : certificateNumberForAttempt(attemptId);
+      sessionStorage.setItem(flagKey, "1");
+
+      if (attempt.referredBy && attempt.email) {
+        void fetch("/api/referral/award", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            referralCode: attempt.referredBy,
+            referredEmail: attempt.email,
+            trigger: "payment",
+            purchaseId: params.purchaseId,
+            certificateNumber: number,
+          }),
+        }).catch(() => {});
+      }
     }
-
-    addCreditsFromPurchase(params.purchaseId, certificateCredits);
-    const redeem = redeemCertificateCredit({
-      attemptId,
-      slug: attempt.slug,
-      programTitle,
-      purchaseId: params.purchaseId,
-    });
-
-    const number = redeem.ok
-      ? redeem.certificate.certificateNumber
-      : certificateNumberForAttempt(attemptId);
 
     setTimeout(() => {
       setCertNumber(number);
@@ -97,80 +109,40 @@ function SuccessInner() {
       setFulfillmentDone(true);
     }, 0);
 
-    sessionStorage.setItem(flagKey, "1");
-    // Referral rule: award only after payment completion, server-side and idempotent.
-    if (attempt.referredBy && attempt.email) {
-      void fetch("/api/referral/award", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          referralCode: attempt.referredBy,
-          referredEmail: attempt.email,
-          trigger: "payment",
-          purchaseId: params.purchaseId,
-          certificateNumber: number,
-        }),
-      }).catch(() => {});
-    }
-
     setIssueError(null);
     void (async () => {
+      const persisted = await persistCertificateIssue({
+        attempt,
+        certificateNumber: number,
+        orderId: params.purchaseId,
+        bundleKey,
+      });
+
+      if (!persisted.ok) {
+        setIssueError(
+          `Could not register certificate — ${persisted.error}. Download will retry registration when you click the button.`,
+        );
+        if (!alreadyFulfilled) sessionStorage.removeItem(flagKey);
+        return;
+      }
+
+      if (persisted.verifyUrl) setIssuedVerifyUrl(persisted.verifyUrl);
+
+      const email = attempt.email?.trim();
+      if (!email || !email.includes("@")) return;
+
+      const emailKey = `edooka_cert_email_${params.purchaseId}`;
+      if (sessionStorage.getItem(emailKey)) {
+        setEmailStatus("sent");
+        return;
+      }
+
+      setEmailStatus("sending");
       try {
-        const issueRes = await fetch("/api/certificate/issue", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            attemptId,
-            orderId: params.purchaseId,
-            bundleKey,
-            slug: attempt.slug,
-            certificateNumber: number,
-            name: attempt.name,
-            email: attempt.email,
-            phone: attempt.phone,
-            programTitle,
-            score: attempt.examScore,
-            total: attempt.examTotal,
-            passed: attempt.examPassed,
-          }),
-        });
-
-        if (!issueRes.ok) {
-          let detail = "";
-          try {
-            const data = (await issueRes.json()) as { error?: string };
-            detail = data.error ?? "";
-          } catch {
-            /* ignore non-JSON */
-          }
-          setIssueError(
-            detail
-              ? `Could not register certificate — ${detail}. Verification may fail until you retry.`
-              : "Could not register certificate — verification may fail until you retry.",
-          );
-          sessionStorage.removeItem(flagKey);
-          return;
-        }
-
-        const issueData = (await issueRes.json()) as { verifyUrl?: string };
-        if (issueData.verifyUrl) setIssuedVerifyUrl(issueData.verifyUrl);
-
-        if (!attempt.email) return;
-
-        const emailKey = `edooka_cert_email_${params.purchaseId}`;
-        if (sessionStorage.getItem(emailKey)) {
-          setEmailStatus("sent");
-          return;
-        }
-
-        setEmailStatus("sending");
         const emailRes = await fetch("/api/certificate/email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: attempt.email,
-            certificateNumber: number,
-          }),
+          body: JSON.stringify({ email, certificateNumber: number }),
         });
         const data = (await emailRes.json()) as { skipped?: boolean };
         if (data.skipped) setEmailStatus("skipped");
@@ -179,10 +151,6 @@ function SuccessInner() {
           sessionStorage.setItem(emailKey, "1");
         } else setEmailStatus("error");
       } catch {
-        setIssueError(
-          "Could not register certificate — check your connection and refresh to retry.",
-        );
-        sessionStorage.removeItem(flagKey);
         setEmailStatus("error");
       }
     })();
@@ -209,9 +177,14 @@ function SuccessInner() {
   }, []);
 
   const downloadCert = useCallback(async () => {
-    if (!certNumber) return;
+    if (!certNumber || !attempt) return;
     await downloadCertificatePng({
       certificateNumber: certNumber,
+      register: {
+        attempt,
+        orderId: params.purchaseId,
+        bundleKey,
+      },
       fallback: {
         fullName: recipientName,
         courseName: programTitle,
@@ -219,7 +192,7 @@ function SuccessInner() {
         verifyUrl: verifyUrl || verifyUrlForCertificate(certNumber),
       },
     });
-  }, [certNumber, recipientName, programTitle, verifyUrl]);
+  }, [attempt, attemptIdParam, bundleKey, certNumber, params.purchaseId, recipientName, programTitle, verifyUrl]);
 
   return (
     <section className="mx-auto w-full max-w-2xl space-y-6 sm:space-y-8">

@@ -1,30 +1,61 @@
 import type { CertificateRenderInput } from "@/lib/certificate-template";
+import { persistCertificateIssue } from "@/lib/persist-certificate-issue";
+import type { ActiveAttempt } from "@/lib/session-keys";
 
 export type DownloadCertificateInput = {
   certificateNumber: string;
-  /** Used when the cert is not in Postgres yet (e.g. issue still pending). */
+  /** Register in Postgres before download (fixes 404 when issue was skipped or failed). */
+  register?: {
+    attempt: ActiveAttempt;
+    orderId: string;
+    bundleKey?: string;
+  };
+  /** Used when PNG is still 404 or render-only path is needed. */
   fallback?: CertificateRenderInput;
 };
 
 async function readApiError(res: Response): Promise<string> {
   try {
-    const data = (await res.json()) as { error?: string };
-    return data.error?.trim() || `HTTP ${res.status}`;
+    const data = (await res.json()) as { error?: string; hint?: string };
+    const parts = [data.error, data.hint].filter(Boolean);
+    return parts.join(" — ") || `HTTP ${res.status}`;
   } catch {
     return `HTTP ${res.status}`;
   }
 }
 
-/** Download certificate PNG — DB route first, optional client render fallback. */
+/** Download certificate PNG — register (optional), DB PNG, then render fallback. */
 export async function downloadCertificatePng(input: DownloadCertificateInput): Promise<void> {
+  let verifyUrl = input.fallback?.verifyUrl ?? "";
+
+  if (input.register) {
+    const persisted = await persistCertificateIssue({
+      attempt: input.register.attempt,
+      certificateNumber: input.certificateNumber,
+      orderId: input.register.orderId,
+      bundleKey: input.register.bundleKey,
+    });
+    if (!persisted.ok) {
+      throw new Error(`Could not register certificate — ${persisted.error}`);
+    }
+    if (persisted.verifyUrl) verifyUrl = persisted.verifyUrl;
+  }
+
   const cert = encodeURIComponent(input.certificateNumber.trim());
   let res = await fetch(`/api/certificate/png/${cert}`);
 
-  if (!res.ok && input.fallback) {
+  const fallback: CertificateRenderInput | undefined = input.fallback
+    ? {
+        ...input.fallback,
+        verifyUrl: verifyUrl || input.fallback.verifyUrl,
+      }
+    : undefined;
+
+  if (!res.ok && fallback) {
     res = await fetch("/api/certificate/render", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input.fallback),
+      body: JSON.stringify(fallback),
     });
   }
 
@@ -32,7 +63,7 @@ export async function downloadCertificatePng(input: DownloadCertificateInput): P
     const detail = await readApiError(res);
     throw new Error(
       res.status === 404
-        ? `Certificate not registered yet — ${detail}. Wait a moment and try again.`
+        ? `Certificate not in database (${detail}). Complete payment/redeem again or call POST /api/certificate/issue first.`
         : `Could not generate certificate — ${detail}`,
     );
   }

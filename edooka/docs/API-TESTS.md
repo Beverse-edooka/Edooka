@@ -82,22 +82,55 @@ curl -s "$BASE/api/referral/coins?referralCode=$CODE" | jq .
 
 ---
 
-## Certificate (DB-backed PNG)
+## Certificate (register in DB, then PNG)
 
-**If the PNG shows only the blank template** (no name, course, ID, or QR), the server could not draw text — usually missing fonts on Linux/Vercel. The app bundles `dejavu-fonts-ttf` and registers them at render time; redeploy after pulling the latest `main`.
+**404 on `/api/certificate/png/...`** means the certificate number is **not in Postgres yet**. The PNG route only serves certs that were registered via `POST /api/certificate/issue`. Use the app download button (it registers first) or run the steps below.
 
-After a real certificate is issued (payment or redeem), open or download:
+**Blank template PNG** (no name/course/ID) = missing fonts on server — redeploy latest `main` (DejaVu fonts in `public/fonts`).
 
-```
-GET {BASE}/api/certificate/png/{CERT_NUMBER}
-```
-
-Example:
+### 1) Check if cert exists
 
 ```powershell
 $BASE = "https://edooka.vercel.app"
-$cert = "EDK-2026-00001"   # replace with a real number from success page
+$cert = "EDK-2026-9D9E379F"   # your cert number from the success page
+Invoke-RestMethod "$BASE/api/verify/$cert"
+```
+
+If `valid` is `false`, register it (step 2).
+
+### 2) Register certificate (required before PNG GET)
+
+```powershell
+$issueBody = @{
+  attemptId         = "PASTE-YOUR-ATTEMPT-UUID"   # from browser URL ?attemptId=
+  orderId           = "wallet-PASTE-ATTEMPT-UUID" # or your Cashfree order id
+  bundleKey         = "single"
+  slug              = "diagnostic-lab"            # program slug you took
+  certificateNumber = $cert
+  name              = "Your Name"
+  email             = "you@example.com"           # optional; synthetic email used if empty
+  phone             = "9999999999"
+} | ConvertTo-Json
+
+Invoke-RestMethod "$BASE/api/certificate/issue" -Method POST -ContentType "application/json" -Body $issueBody
+```
+
+### 3) Download PNG
+
+```powershell
 Invoke-WebRequest "$BASE/api/certificate/png/$cert" -OutFile "certificate-test.png"
+```
+
+Or render without DB (POST):
+
+```powershell
+$renderBody = @{
+  fullName          = "Your Name"
+  courseName        = "Diagnostic Lab Operations"
+  certificateNumber = $cert
+  verifyUrl         = "$BASE/verify/$cert"
+} | ConvertTo-Json
+Invoke-WebRequest "$BASE/api/certificate/render" -Method POST -ContentType "application/json" -Body $renderBody -OutFile "certificate-render.png"
 ```
 
 Verify by number or QR token:

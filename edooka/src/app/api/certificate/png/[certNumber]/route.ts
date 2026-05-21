@@ -13,7 +13,14 @@ export async function GET(
 
   const input = await getCertificateRenderInputFromDb(normalized);
   if (!input) {
-    return NextResponse.json({ error: "Certificate not found" }, { status: 404 });
+    return NextResponse.json(
+      {
+        error: "Certificate not found in database",
+        certificateNumber: normalized.trim().toUpperCase(),
+        hint: "Register it first: POST /api/certificate/issue (or download from the success/redeem page in the app).",
+      },
+      { status: 404 }
+    );
   }
 
   try {

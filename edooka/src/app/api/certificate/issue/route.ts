@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { attempts, certificates, programs, purchases, users } from "@/lib/db/schema";
 import { getAppOrigin, verifyUrlForCertificate } from "@/lib/app-url";
+import { resolveCertificateIssueEmail } from "@/lib/certificate-issue-email";
 import { getActiveProgramBySlug } from "@/server/queries/programs";
 import type { BundleType } from "@/types";
 
@@ -42,13 +43,14 @@ export async function POST(req: NextRequest) {
   const orderId = body.orderId?.trim();
   const slug = body.slug?.trim();
   const certNumber = body.certificateNumber?.trim().toUpperCase();
-  const email = body.email?.trim().toLowerCase();
   const name = body.name?.trim() || "Learner";
   const phone = body.phone?.trim() || "0000000000";
 
-  if (!attemptId || !orderId || !slug || !certNumber || !email) {
+  if (!attemptId || !orderId || !slug || !certNumber) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
+
+  const email = resolveCertificateIssueEmail(body.email, attemptId);
 
   const bundleKey = (body.bundleKey ?? "single") as BundleType;
   const qrToken = newQrToken();
@@ -56,9 +58,23 @@ export async function POST(req: NextRequest) {
   const pdfUrl = `${getAppOrigin()}/api/certificate/png/${encodeURIComponent(certNumber)}`;
 
   try {
-    const program = await getActiveProgramBySlug(slug);
+    let program = await getActiveProgramBySlug(slug);
     if (!program) {
-      return NextResponse.json({ error: "program_not_found" }, { status: 404 });
+      const [inactive] = await db
+        .select()
+        .from(programs)
+        .where(eq(programs.slug, slug))
+        .limit(1);
+      program = inactive ?? null;
+    }
+    if (!program) {
+      return NextResponse.json(
+        {
+          error: "program_not_found",
+          hint: "Run npm run db:setup on your Neon database to seed programs.",
+        },
+        { status: 404 }
+      );
     }
 
     let [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);

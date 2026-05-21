@@ -141,6 +141,10 @@ export default function RedeemCertificatePage() {
     if (!certNumber || !attempt) return;
     await downloadCertificatePng({
       certificateNumber: certNumber,
+      register: {
+        attempt,
+        orderId: `wallet-${attemptId}`,
+      },
       fallback: {
         fullName: attempt.name,
         courseName: programTitle,

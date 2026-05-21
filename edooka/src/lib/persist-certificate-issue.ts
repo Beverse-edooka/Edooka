@@ -1,11 +1,8 @@
+import { resolveCertificateIssueEmail } from "@/lib/certificate-issue-email";
 import type { ActiveAttempt } from "@/lib/session-keys";
 
-/** Email required by /api/certificate/issue — synthesise when redeeming without one. */
 export function emailForCertificateIssue(attempt: ActiveAttempt): string {
-  const email = attempt.email?.trim().toLowerCase();
-  if (email && email.includes("@")) return email;
-  const safeId = attempt.attemptId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 48) || "learner";
-  return `wallet+${safeId}@edooka.invalid`;
+  return resolveCertificateIssueEmail(attempt.email, attempt.attemptId);
 }
 
 export async function persistCertificateIssue(input: {
