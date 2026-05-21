@@ -1,8 +1,11 @@
 {
   "name": "edooka-monorepo-root",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
-    "build": "cd edooka && npm ci && npm run build",
+    "build": "cd edooka && npm install && npm run build",
     "start": "cd edooka && npm run start",
     "dev": "cd edooka && npm run dev"
   },

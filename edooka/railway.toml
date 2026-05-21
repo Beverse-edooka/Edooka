@@ -1,10 +1,13 @@
-# Railway deploy config — set the service Root Directory to `edooka` in the dashboard
-# when the git repo root is the parent `Edooka/` folder.
+# Railway deploy — REQUIRED: set service Root Directory to `edooka` in Railway dashboard.
+# (If root is the parent repo folder, npm ci uses the wrong lockfile and Node 18.)
 
 [build]
 builder = "NIXPACKS"
-# Use npm install if npm ci fails on lockfile drift; root package.json also has build/start fallbacks.
 buildCommand = "npm install && npm run build"
+
+[build.env]
+NIXPACKS_NODE_VERSION = "20"
+NIXPACKS_INSTALL_CMD = "npm install"
 
 [deploy]
 startCommand = "npm run start"

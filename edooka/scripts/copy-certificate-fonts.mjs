@@ -25,6 +25,10 @@ for (const file of files) {
     console.warn(`[copy-certificate-fonts] missing ${file}`);
     continue;
   }
-  copyFileSync(src, join(destDir, file));
+  try {
+    copyFileSync(src, join(destDir, file));
+  } catch (err) {
+    console.warn(`[copy-certificate-fonts] could not copy ${file}:`, err?.message ?? err);
+  }
 }
 console.log("[copy-certificate-fonts] copied", readdirSync(destDir).length, "fonts to public/fonts");
