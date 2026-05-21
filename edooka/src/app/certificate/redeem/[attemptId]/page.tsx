@@ -26,6 +26,8 @@ export default function RedeemCertificatePage() {
   const [attempt, setAttempt] = useState<ActiveAttempt | null>(null);
   const [credits, setCredits] = useState(0);
   const [certNumber, setCertNumber] = useState<string | null>(null);
+  const [issuedVerifyUrl, setIssuedVerifyUrl] = useState("");
+  const [dbReady, setDbReady] = useState(false);
   const [error, setError] = useState("");
   const [issuedDateLabel, setIssuedDateLabel] = useState("");
 
@@ -54,6 +56,7 @@ export default function RedeemCertificatePage() {
     if (existing) {
       setCertNumber(existing.certificateNumber);
       setCredits(getRemainingCredits());
+      setDbReady(true);
       return;
     }
 
@@ -84,43 +87,48 @@ export default function RedeemCertificatePage() {
     // Persist into Postgres so the verify endpoint can resolve this cert.
     // The redeem flow doesn't have a Cashfree order, so we synthesise one
     // from the attempt id; the issue route upserts a purchase row off it.
-    void fetch("/api/certificate/issue", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        attemptId,
-        orderId: `wallet-${attemptId}`,
-        bundleKey: "single",
-        slug: loaded.slug,
-        certificateNumber: issuedNumber,
-        name: loaded.name,
-        email: loaded.email,
-        phone: loaded.phone,
-        programTitle: loaded.programTitle,
-        score: loaded.examScore,
-        total: loaded.examTotal,
-        passed: loaded.examPassed,
-      }),
-    }).catch(() => {
-      /* network errors surface via verify-not-found later */
-    });
+    void (async () => {
+      try {
+        const res = await fetch("/api/certificate/issue", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            attemptId,
+            orderId: `wallet-${attemptId}`,
+            bundleKey: "single",
+            slug: loaded.slug,
+            certificateNumber: issuedNumber,
+            name: loaded.name,
+            email: loaded.email,
+            phone: loaded.phone,
+            programTitle: loaded.programTitle,
+            score: loaded.examScore,
+            total: loaded.examTotal,
+            passed: loaded.examPassed,
+          }),
+        });
+        if (res.ok) {
+          const data = (await res.json()) as { verifyUrl?: string };
+          if (data.verifyUrl) setIssuedVerifyUrl(data.verifyUrl);
+        }
+      } catch {
+        /* network errors surface via verify-not-found later */
+      } finally {
+        setDbReady(true);
+      }
+    })();
   }, [attemptId]);
 
   const programTitle = attempt?.programTitle ?? "Healthcare assessment";
   const recipientName = attempt?.name ?? "Learner";
   const verifyUrl = useMemo(
-    () => (certNumber ? verifyUrlForCertificate(certNumber) : ""),
-    [certNumber]
+    () => issuedVerifyUrl || (certNumber ? verifyUrlForCertificate(certNumber) : ""),
+    [certNumber, issuedVerifyUrl]
   );
 
   const downloadCert = useCallback(async () => {
     if (!certNumber) return;
-    await downloadCertificatePng({
-      fullName: recipientName,
-      courseName: programTitle,
-      certificateNumber: certNumber,
-      verifyUrl,
-    });
+    await downloadCertificatePng({ certificateNumber: certNumber });
     // Server-side referral award on certificate download path (idempotent).
     if (attempt?.referredBy && attempt.email) {
       void fetch("/api/referral/award", {
@@ -134,7 +142,7 @@ export default function RedeemCertificatePage() {
         }),
       }).catch(() => {});
     }
-  }, [attempt?.email, attempt?.referredBy, certNumber, recipientName, programTitle, verifyUrl]);
+  }, [attempt?.email, attempt?.referredBy, certNumber]);
 
   if (error) {
     return (
@@ -180,10 +188,11 @@ export default function RedeemCertificatePage() {
           type="button"
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.98 }}
+          disabled={!dbReady}
           onClick={() => void downloadCert()}
-          className="rounded-xl bg-primary px-6 py-3 font-semibold text-white shadow"
+          className="rounded-xl bg-primary px-6 py-3 font-semibold text-white shadow disabled:opacity-50"
         >
-          Download certificate
+          {dbReady ? "Download certificate" : "Registering certificate…"}
         </motion.button>
         <CertificateShareButtons verifyUrl={verifyUrl} programTitle={programTitle} />
         <Link

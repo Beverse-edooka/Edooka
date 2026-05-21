@@ -31,6 +31,7 @@ function SuccessInner() {
   const [issuedDateLabel, setIssuedDateLabel] = useState("");
   const [remainingCredits, setRemainingCredits] = useState(0);
   const [certNumber, setCertNumber] = useState("");
+  const [issuedVerifyUrl, setIssuedVerifyUrl] = useState("");
   const [fulfillmentDone, setFulfillmentDone] = useState(false);
   const [issueError, setIssueError] = useState<string | null>(null);
 
@@ -56,8 +57,8 @@ function SuccessInner() {
   const recipientName = attempt?.name ?? "Learner";
   const programTitle = attempt?.programTitle ?? "Healthcare assessment";
   const verifyUrl = useMemo(
-    () => (certNumber ? verifyUrlForCertificate(certNumber) : ""),
-    [certNumber]
+    () => issuedVerifyUrl || (certNumber ? verifyUrlForCertificate(certNumber) : ""),
+    [certNumber, issuedVerifyUrl]
   );
 
   // On payment success: add bundle credits, consume one for this attempt, persist + email (once).
@@ -113,75 +114,78 @@ function SuccessInner() {
     }
 
     setIssueError(null);
-    fetch("/api/certificate/issue", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        attemptId,
-        orderId: params.purchaseId,
-        bundleKey,
-        slug: attempt.slug,
-        certificateNumber: number,
-        name: attempt.name,
-        email: attempt.email,
-        phone: attempt.phone,
-        programTitle,
-        score: attempt.examScore,
-        total: attempt.examTotal,
-        passed: attempt.examPassed,
-      }),
-    })
-      .then(async (res) => {
-        if (res.ok) return;
-        let detail = "";
-        try {
-          const data = (await res.json()) as { error?: string };
-          detail = data.error ?? "";
-        } catch {
-          /* ignore non-JSON */
-        }
-        setIssueError(
-          detail
-            ? `Could not register certificate — ${detail}. Verification may fail until you retry.`
-            : "Could not register certificate — verification may fail until you retry.",
-        );
-        sessionStorage.removeItem(flagKey);
-      })
-      .catch(() => {
-        setIssueError(
-          "Could not register certificate — check your connection and refresh to retry.",
-        );
-        sessionStorage.removeItem(flagKey);
-      });
+    void (async () => {
+      try {
+        const issueRes = await fetch("/api/certificate/issue", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            attemptId,
+            orderId: params.purchaseId,
+            bundleKey,
+            slug: attempt.slug,
+            certificateNumber: number,
+            name: attempt.name,
+            email: attempt.email,
+            phone: attempt.phone,
+            programTitle,
+            score: attempt.examScore,
+            total: attempt.examTotal,
+            passed: attempt.examPassed,
+          }),
+        });
 
-    if (attempt.email) {
-      const emailKey = `edooka_cert_email_${params.purchaseId}`;
-      if (!sessionStorage.getItem(emailKey)) {
+        if (!issueRes.ok) {
+          let detail = "";
+          try {
+            const data = (await issueRes.json()) as { error?: string };
+            detail = data.error ?? "";
+          } catch {
+            /* ignore non-JSON */
+          }
+          setIssueError(
+            detail
+              ? `Could not register certificate — ${detail}. Verification may fail until you retry.`
+              : "Could not register certificate — verification may fail until you retry.",
+          );
+          sessionStorage.removeItem(flagKey);
+          return;
+        }
+
+        const issueData = (await issueRes.json()) as { verifyUrl?: string };
+        if (issueData.verifyUrl) setIssuedVerifyUrl(issueData.verifyUrl);
+
+        if (!attempt.email) return;
+
+        const emailKey = `edooka_cert_email_${params.purchaseId}`;
+        if (sessionStorage.getItem(emailKey)) {
+          setEmailStatus("sent");
+          return;
+        }
+
         setEmailStatus("sending");
-        void fetch("/api/certificate/email", {
+        const emailRes = await fetch("/api/certificate/email", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: attempt.email,
-            recipientName,
-            programTitle,
             certificateNumber: number,
-            verifyUrl: verifyUrlForCertificate(number),
           }),
-        })
-          .then(async (res) => {
-            const data = (await res.json()) as { skipped?: boolean };
-            if (data.skipped) setEmailStatus("skipped");
-            else if (res.ok) {
-              setEmailStatus("sent");
-              sessionStorage.setItem(emailKey, "1");
-            } else setEmailStatus("error");
-          })
-          .catch(() => setEmailStatus("error"));
-      } else {
-        setEmailStatus("sent");
+        });
+        const data = (await emailRes.json()) as { skipped?: boolean };
+        if (data.skipped) setEmailStatus("skipped");
+        else if (emailRes.ok) {
+          setEmailStatus("sent");
+          sessionStorage.setItem(emailKey, "1");
+        } else setEmailStatus("error");
+      } catch {
+        setIssueError(
+          "Could not register certificate — check your connection and refresh to retry.",
+        );
+        sessionStorage.removeItem(flagKey);
+        setEmailStatus("error");
       }
-    }
+    })();
   }, [
     attempt,
     attemptIdParam,
@@ -190,7 +194,6 @@ function SuccessInner() {
     fulfillmentDone,
     params.purchaseId,
     programTitle,
-    recipientName,
   ]);
 
   useEffect(() => {
@@ -207,13 +210,8 @@ function SuccessInner() {
 
   const downloadCert = useCallback(async () => {
     if (!certNumber) return;
-    await downloadCertificatePng({
-      fullName: recipientName,
-      courseName: programTitle,
-      certificateNumber: certNumber,
-      verifyUrl: verifyUrl || verifyUrlForCertificate(certNumber),
-    });
-  }, [certNumber, recipientName, programTitle, verifyUrl]);
+    await downloadCertificatePng({ certificateNumber: certNumber });
+  }, [certNumber]);
 
   return (
     <section className="mx-auto w-full max-w-2xl space-y-6 sm:space-y-8">
@@ -258,9 +256,10 @@ function SuccessInner() {
           type="button"
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.98 }}
-          disabled={!certNumber}
+          disabled={!certNumber || !!issueError}
           onClick={() => void downloadCert()}
           className="rounded-xl bg-primary px-5 py-2.5 font-semibold text-white shadow disabled:opacity-50 sm:px-6 sm:py-3"
+          title={issueError ? "Register certificate first (refresh after fixing the error above)" : undefined}
         >
           Download certificate
         </motion.button>

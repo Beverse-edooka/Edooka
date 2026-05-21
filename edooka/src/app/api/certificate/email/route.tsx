@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyUrlForCertificate } from "@/lib/app-url";
+import { getCertificateRenderInputFromDb } from "@/lib/certificate-from-db";
 import { buildCertificateEmailHtml, sendMail } from "@/lib/email";
 import { renderCertificatePng } from "@/lib/certificate-template";
 
@@ -28,26 +29,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Valid email required" }, { status: 400 });
   }
 
-  const recipientName = body.recipientName?.trim() ?? "Learner";
-  const programTitle = body.programTitle?.trim() ?? "Assessment";
   const certificateNumber = body.certificateNumber?.trim() ?? "EDK-PENDING";
-  const verifyUrl = body.verifyUrl?.trim() || verifyUrlForCertificate(certificateNumber);
+  const fromDb = await getCertificateRenderInputFromDb(certificateNumber);
+
+  const recipientName = fromDb?.fullName ?? body.recipientName?.trim() ?? "Learner";
+  const programTitle = fromDb?.courseName ?? body.programTitle?.trim() ?? "Assessment";
+  const verifyUrl =
+    fromDb?.verifyUrl ??
+    body.verifyUrl?.trim() ??
+    verifyUrlForCertificate(fromDb?.certificateNumber ?? certificateNumber);
 
   const html = buildCertificateEmailHtml({
     fullName: recipientName,
     courseName: programTitle,
-    certificateNumber,
+    certificateNumber: fromDb?.certificateNumber ?? certificateNumber,
     verifyUrl,
   });
 
   let pngBuffer: Buffer;
   try {
-    pngBuffer = await renderCertificatePng({
-      fullName: recipientName,
-      courseName: programTitle,
-      certificateNumber,
-      verifyUrl,
-    });
+    pngBuffer = await renderCertificatePng(
+      fromDb ?? {
+        fullName: recipientName,
+        courseName: programTitle,
+        certificateNumber,
+        verifyUrl,
+      }
+    );
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Certificate render failed" },

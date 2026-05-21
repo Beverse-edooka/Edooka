@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { certificates, users, programs } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { getCertificateRenderInputFromDb } from "@/lib/certificate-from-db";
 import { renderCertificatePng } from "@/lib/certificate-template";
 
 export const runtime = "nodejs";
@@ -11,34 +9,20 @@ export async function GET(
   { params }: { params: Promise<{ certNumber: string }> }
 ) {
   const { certNumber } = await params;
-  const normalized = decodeURIComponent(certNumber).trim().toUpperCase();
+  const normalized = decodeURIComponent(certNumber).trim();
 
-  const [row] = await db
-    .select({ cert: certificates, user: users, program: programs })
-    .from(certificates)
-    .innerJoin(users, eq(certificates.userId, users.id))
-    .innerJoin(programs, eq(certificates.programId, programs.id))
-    .where(eq(certificates.certificateNumber, normalized))
-    .limit(1);
-
-  if (!row) {
+  const input = await getCertificateRenderInputFromDb(normalized);
+  if (!input) {
     return NextResponse.json({ error: "Certificate not found" }, { status: 404 });
   }
 
-  const { cert, user, program } = row;
-
   try {
-    const buffer = await renderCertificatePng({
-      fullName: user.name,
-      courseName: program.title,
-      certificateNumber: cert.certificateNumber,
-      verifyUrl: cert.verificationUrl,
-    });
+    const buffer = await renderCertificatePng(input);
 
     return new NextResponse(buffer as unknown as BodyInit, {
       headers: {
         "Content-Type": "image/png",
-        "Content-Disposition": `attachment; filename="${cert.certificateNumber}.png"`,
+        "Content-Disposition": `attachment; filename="${input.certificateNumber}.png"`,
         "Cache-Control": "public, max-age=86400",
       },
     });
