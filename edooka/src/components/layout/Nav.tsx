@@ -18,10 +18,7 @@ export function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [coins, setCoins] = useState<number>(() => {
-    if (typeof window === "undefined") return 0;
-    return Number(localStorage.getItem("edookaCoins") ?? 0);
-  });
+  const [coins, setCoins] = useState<number>(0);
 
   // Generate a persistent referral code for the user
   const referralCode = useState(() => {
@@ -45,20 +42,22 @@ export function Nav() {
       localStorage.setItem("edookaReferredBy", refCode);
     }
     
-    // Check for referral coins awarded to this user
     const myReferralCode = localStorage.getItem("edookaReferralCode");
-    if (myReferralCode) {
-      const referralCoinKey = `edookaCoins_${myReferralCode}`;
-      const referralCoins = Number(localStorage.getItem(referralCoinKey) ?? 0);
-      if (referralCoins > 0) {
-        const currentCoins = Number(localStorage.getItem("edookaCoins") ?? 0);
-        localStorage.setItem("edookaCoins", String(currentCoins + referralCoins));
-        localStorage.removeItem(referralCoinKey); // Clear after claiming
-        setTimeout(() => {
-          setCoins(currentCoins + referralCoins);
-        }, 0);
-      }
-    }
+    if (!myReferralCode) return;
+
+    // Ensure wallet exists and fetch current DB-backed coin balance.
+    void fetch("/api/referral/init", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ referralCode: myReferralCode }),
+    })
+      .then((r) => r.json())
+      .then((data: { coins?: number }) => {
+        if (typeof data.coins === "number") {
+          setCoins(data.coins);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   function copyLink() {
@@ -169,7 +168,7 @@ export function Nav() {
                 <div>
                   <h2 className="text-xl font-extrabold">Refer a Friend 🎁</h2>
                   <p className="mt-1 text-sm text-text-secondary">
-                    Share your link. When your friend completes an assessment, you earn{" "}
+                    Share your link. When your friend completes payment or downloads certificate, you earn{" "}
                     <span className="font-bold text-primary">+1 coin</span>.
                   </p>
                 </div>

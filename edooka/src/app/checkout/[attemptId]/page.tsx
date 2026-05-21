@@ -29,7 +29,6 @@ function CheckoutInner() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setCoins(Number(localStorage.getItem("edookaCoins") ?? 0));
     const raw = sessionStorage.getItem(EDOOKA_ATTEMPT_KEY);
     let loaded: ActiveAttempt | null = null;
     if (raw) {
@@ -52,20 +51,63 @@ function CheckoutInner() {
     }
   }, [params.attemptId]);
 
+  useEffect(() => {
+    const referralCode = attempt?.referredBy?.trim();
+    if (!referralCode) {
+      setCoins(0);
+      return;
+    }
+    fetch(`/api/referral/coins?referralCode=${encodeURIComponent(referralCode)}`)
+      .then((r) => r.json())
+      .then((data: { coins?: number }) => {
+        if (typeof data.coins === "number") setCoins(data.coins);
+      })
+      .catch(() => {});
+  }, [attempt?.referredBy]);
+
   const redeemWithCoins = useCallback(() => {
+    if (!attempt?.referredBy) {
+      setMessage("No referral wallet linked to this attempt.");
+      return;
+    }
     if (coins < 5) {
       setMessage("You need at least 5 coins to redeem 1 certificate.");
       return;
     }
-    const nextCoins = coins - 5;
-    localStorage.setItem("edookaCoins", String(nextCoins));
-    setCoins(nextCoins);
-    setMessage("Redeemed successfully! Certificate unlocked using referral coins.");
-    const oid = `coins_${params.attemptId}`;
-    router.push(
-      `/success/${oid}?attemptId=${encodeURIComponent(params.attemptId)}&bundle=${encodeURIComponent(bundleKey)}&demo=1`
-    );
-  }, [coins, params.attemptId, router, bundleKey]);
+    setPayError("");
+    setMessage("");
+    setPaying(true);
+    void fetch("/api/referral/spend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        referralCode: attempt.referredBy,
+        attemptId: params.attemptId,
+        coins: 5,
+      }),
+    })
+      .then(async (res) => {
+        const data = (await res.json()) as { ok?: boolean; coins?: number; reason?: string; error?: string };
+        if (!res.ok || !data.ok) {
+          if (data.reason === "already_spent_for_attempt") {
+            setMessage("Coins already used for this attempt.");
+          } else if (data.reason === "insufficient_coins") {
+            setMessage("Not enough referral coins.");
+          } else {
+            setMessage(data.error ?? "Could not redeem referral coins.");
+          }
+          return;
+        }
+        if (typeof data.coins === "number") setCoins(data.coins);
+        setMessage("Redeemed successfully! Certificate unlocked using referral coins.");
+        const oid = `coins_${params.attemptId}`;
+        router.push(
+          `/success/${oid}?attemptId=${encodeURIComponent(params.attemptId)}&bundle=${encodeURIComponent(bundleKey)}&demo=1`
+        );
+      })
+      .catch(() => setMessage("Network error while redeeming coins."))
+      .finally(() => setPaying(false));
+  }, [attempt?.referredBy, bundleKey, coins, params.attemptId, router]);
 
   async function payNow() {
     if (!tier || !attempt) {
@@ -181,10 +223,11 @@ function CheckoutInner() {
         </p>
         <button
           type="button"
+          disabled={paying}
           onClick={redeemWithCoins}
-          className="rounded-xl border border-primary px-4 py-2 font-semibold text-primary card-hover"
+          className="rounded-xl border border-primary px-4 py-2 font-semibold text-primary card-hover disabled:opacity-50"
         >
-          Redeem 5 coins (skip payment)
+          {paying ? "Redeeming…" : "Redeem 5 coins (skip payment)"}
         </button>
         {message ? <p className="text-sm">{message}</p> : null}
       </article>

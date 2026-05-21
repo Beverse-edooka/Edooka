@@ -121,7 +121,20 @@ export default function RedeemCertificatePage() {
       certificateNumber: certNumber,
       verifyUrl,
     });
-  }, [certNumber, recipientName, programTitle, verifyUrl]);
+    // Server-side referral award on certificate download path (idempotent).
+    if (attempt?.referredBy && attempt.email) {
+      void fetch("/api/referral/award", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          referralCode: attempt.referredBy,
+          referredEmail: attempt.email,
+          trigger: "certificate_download",
+          certificateNumber: certNumber,
+        }),
+      }).catch(() => {});
+    }
+  }, [attempt?.email, attempt?.referredBy, certNumber, recipientName, programTitle, verifyUrl]);
 
   if (error) {
     return (

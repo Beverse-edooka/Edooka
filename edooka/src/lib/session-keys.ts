@@ -21,6 +21,8 @@ export type ActiveAttempt = {
   examScore?: number;
   examTotal?: number;
   examCompletedAt?: number;
+  /** Referral code of the user who invited this learner (if any). */
+  referredBy?: string;
 };
 
 export function persistLearnerProfile(profile: ActiveAttempt): void {

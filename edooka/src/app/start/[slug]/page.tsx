@@ -29,6 +29,7 @@ export default function StartAssessmentPage() {
   const slug = params.slug ?? "";
   const router = useRouter();
   const [program, setProgram] = useState<ProgramCard | null>(() => getProgramBySlug(slug) ?? null);
+  const [referredBy, setReferredBy] = useState("");
 
   useEffect(() => {
     fetch("/api/catalog/programs")
@@ -39,6 +40,11 @@ export default function StartAssessmentPage() {
       })
       .catch(() => {});
   }, [slug]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setReferredBy(localStorage.getItem("edookaReferredBy") ?? "");
+  }, []);
 
   const {
     register,
@@ -73,6 +79,7 @@ export default function StartAssessmentPage() {
       email: values.email.trim().toLowerCase(),
       phone: values.phone.trim(),
       startedAt: Date.now(),
+      referredBy: referredBy || undefined,
     };
     sessionStorage.setItem(EDOOKA_ATTEMPT_KEY, JSON.stringify(payload));
     persistLearnerProfile(payload);

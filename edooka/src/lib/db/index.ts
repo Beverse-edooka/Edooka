@@ -10,9 +10,17 @@ import { rewriteSupabaseDbUrlIfNeeded } from "./rewrite-supabase-url";
  * Neon: use the *pooled* connection string from the dashboard (host contains `-pooler`)
  * to avoid 2–3s cold connects on serverless routes.
  */
+/** Strip query params that break Vercel/serverless Postgres clients (e.g. Neon copy-paste). */
+function normalizeDatabaseUrl(url: string): string {
+  let out = rewriteSupabaseDbUrlIfNeeded(url.trim());
+  out = out.replace(/([?&])channel_binding=require(&?)/gi, "$1");
+  out = out.replace(/\?&/, "?").replace(/\?$/, "");
+  return out;
+}
+
 function resolveConnectionString(): string {
   const fromEnv = process.env.DATABASE_URL?.trim();
-  if (fromEnv) return rewriteSupabaseDbUrlIfNeeded(fromEnv);
+  if (fromEnv) return normalizeDatabaseUrl(fromEnv);
   if (process.env.NEXT_PHASE === "phase-production-build") {
     return "postgresql://build:build@127.0.0.1:5432/build";
   }

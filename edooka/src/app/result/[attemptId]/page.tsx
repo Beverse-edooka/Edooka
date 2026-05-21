@@ -163,18 +163,6 @@ export default function ResultPage() {
     setAlreadyIssued(isAttemptRedeemed(params.attemptId));
   }, [params.attemptId]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const referredBy = localStorage.getItem("edookaReferredBy");
-    const hasAwarded = localStorage.getItem("edookaReferralAwarded");
-    if (referredBy && !hasAwarded) {
-      localStorage.setItem("edookaReferralAwarded", "true");
-      const referrerCoinKey = `edookaCoins_${referredBy}`;
-      const currentCoins = Number(localStorage.getItem(referrerCoinKey) ?? 0);
-      localStorage.setItem(referrerCoinKey, String(currentCoins + 1));
-    }
-  }, []);
-
   const displayName = attempt?.name ?? "Your name";
   const resultQuery = searchParams.toString();
   const pricingHref = `/result/${params.attemptId}/pricing${resultQuery ? `?${resultQuery}` : ""}`;

@@ -97,6 +97,20 @@ function SuccessInner() {
     }, 0);
 
     sessionStorage.setItem(flagKey, "1");
+    // Referral rule: award only after payment completion, server-side and idempotent.
+    if (attempt.referredBy && attempt.email) {
+      void fetch("/api/referral/award", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          referralCode: attempt.referredBy,
+          referredEmail: attempt.email,
+          trigger: "payment",
+          purchaseId: params.purchaseId,
+          certificateNumber: number,
+        }),
+      }).catch(() => {});
+    }
 
     setIssueError(null);
     fetch("/api/certificate/issue", {

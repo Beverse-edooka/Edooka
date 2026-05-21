@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { programs } from "@/lib/db/schema";
-import { PROGRAMS } from "@/data/programs";
 import { mapDbProgramToCard } from "@/lib/catalog-map";
-import { fileProgramsList, shouldUseAdminFileCatalog } from "@/lib/admin-catalog-file";
 
 export const runtime = "nodejs";
 
@@ -22,17 +20,12 @@ export async function GET() {
         source: "postgres",
       });
     }
+    return NextResponse.json({ programs: [], source: "postgres" });
   } catch (e) {
-    if (shouldUseAdminFileCatalog(e)) {
-      const rows = fileProgramsList().filter((p) => p.isActive);
-      if (rows.length > 0) {
-        return NextResponse.json({
-          programs: rows.map((r) => mapDbProgramToCard(r)),
-          source: "file",
-        });
-      }
-    }
+    const message = e instanceof Error ? e.message : "Database unavailable";
+    return NextResponse.json(
+      { programs: [], source: "postgres", error: message },
+      { status: 503 }
+    );
   }
-
-  return NextResponse.json({ programs: PROGRAMS, source: "static" });
 }

@@ -22,6 +22,7 @@ export const paymentStatus = pgEnum("payment_status", [
   "failed",
   "refunded",
 ]);
+export const referralTrigger = pgEnum("referral_trigger", ["payment", "certificate_download"]);
 
 export const users = pgTable(
   "users",
@@ -141,5 +142,52 @@ export const deliveryQueue = pgTable("delivery_queue", {
   whatsappSentAt: timestamp("whatsapp_sent_at", { withTimezone: true }),
   attempts: integer("attempts").notNull().default(0),
   lastError: text("last_error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Server-side referral wallet keyed by referral code.
+ * Coins are never trusted from localStorage.
+ */
+export const referralWallets = pgTable("referral_wallets", {
+  referralCode: text("referral_code").primaryKey(),
+  coins: integer("coins").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * One award per (referralCode + referredEmail). This prevents duplicate coin farming
+ * for the same referred learner across payment/download retries.
+ */
+export const referralEvents = pgTable(
+  "referral_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    referralCode: text("referral_code")
+      .notNull()
+      .references(() => referralWallets.referralCode, { onDelete: "cascade" }),
+    referredEmail: text("referred_email").notNull(),
+    trigger: referralTrigger("trigger").notNull(),
+    purchaseId: text("purchase_id"),
+    certificateNumber: text("certificate_number"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    uniqReferrerReferred: index("idx_referral_events_refcode_email").on(t.referralCode, t.referredEmail),
+    refCodeIdx: index("idx_referral_events_refcode").on(t.referralCode),
+  })
+);
+
+/**
+ * Coin spend ledger for referral wallet redemptions.
+ * One spend record per attempt to prevent double-spend via refresh/retry.
+ */
+export const referralSpends = pgTable("referral_spends", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  referralCode: text("referral_code")
+    .notNull()
+    .references(() => referralWallets.referralCode, { onDelete: "cascade" }),
+  attemptId: text("attempt_id").notNull().unique(),
+  coinsSpent: integer("coins_spent").notNull().default(5),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

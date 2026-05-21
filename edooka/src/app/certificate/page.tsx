@@ -1,23 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Page: Certificate
  * Purpose: Shows certificate-related quick actions for users.
  */
 export default function CertificatePage() {
-  const [coins, setCoins] = useState<number>(() => {
-    if (typeof window === "undefined") return 0;
-    return Number(localStorage.getItem("edookaCoins") ?? 0);
-  });
+  const [coins, setCoins] = useState<number>(0);
 
-  function addReferralCoin() {
-    const next = coins + 1;
-    localStorage.setItem("edookaCoins", String(next));
-    setCoins(next);
-  }
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const code = localStorage.getItem("edookaReferralCode");
+    if (!code) return;
+    fetch(`/api/referral/coins?referralCode=${encodeURIComponent(code)}`)
+      .then((r) => r.json())
+      .then((d: { coins?: number }) => {
+        if (typeof d.coins === "number") setCoins(d.coins);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <section className="space-y-4">
@@ -32,13 +35,9 @@ export default function CertificatePage() {
         <Link href="/verify" className="rounded-xl border border-border-default px-4 py-2 card-hover">
           Verify sample
         </Link>
-        <button
-          type="button"
-          onClick={addReferralCoin}
-          className="rounded-xl border border-primary px-4 py-2 font-semibold text-primary card-hover"
-        >
-          Refer a friend (+1 coin)
-        </button>
+        <Link href="/assessments" className="rounded-xl border border-primary px-4 py-2 font-semibold text-primary card-hover">
+          Take assessment
+        </Link>
       </div>
       <article className="rounded-2xl border border-primary/30 bg-soft-orange p-4">
         <p className="font-semibold">Referral wallet: {coins} coins</p>
