@@ -130,10 +130,20 @@ function CheckoutInner() {
           },
         }),
       });
-      const data = (await res.json()) as { paymentLink?: string; error?: string; demo?: boolean };
+      const data = (await res.json()) as {
+        paymentLink?: string;
+        error?: string;
+        hint?: string;
+        demo?: boolean;
+        message?: string;
+      };
       if (!res.ok) {
-        setPayError(data.error ?? "Payment could not start.");
+        const parts = [data.error, data.hint].filter(Boolean);
+        setPayError(parts.join(" — ") || "Payment could not start.");
         return;
+      }
+      if (data.demo && data.message) {
+        setPayError("");
       }
       if (data.paymentLink) {
         window.location.href = data.paymentLink;

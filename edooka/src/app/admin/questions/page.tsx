@@ -49,6 +49,10 @@ export default function AdminQuestionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importProgramId, setImportProgramId] = useState("");
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importMessage, setImportMessage] = useState("");
 
   const loadPrograms = useCallback(async () => {
     const res = await fetch("/api/admin/programs", { credentials: "include" });
@@ -86,6 +90,12 @@ export default function AdminQuestionsPage() {
   useEffect(() => {
     void loadQuestions();
   }, [loadQuestions]);
+
+  useEffect(() => {
+    if (!importProgramId && programs.length) {
+      setImportProgramId(filterProgramId || programs[0]?.id || "");
+    }
+  }, [programs, filterProgramId, importProgramId]);
 
   function startCreate() {
     setForm({
@@ -150,6 +160,64 @@ export default function AdminQuestionsPage() {
     }
   }
 
+  async function importCsv() {
+    if (!importProgramId) {
+      setError("Select a program for CSV import");
+      return;
+    }
+    if (!importFile) {
+      setError("Choose a CSV file to upload");
+      return;
+    }
+    setImporting(true);
+    setError("");
+    setImportMessage("");
+    try {
+      const fd = new FormData();
+      fd.set("programId", importProgramId);
+      fd.set("file", importFile);
+      const res = await fetch("/api/admin/questions/import", {
+        method: "POST",
+        credentials: "include",
+        body: fd,
+      });
+      const data = (await res.json()) as {
+        error?: string;
+        imported?: number;
+        line?: number;
+        warnings?: string[];
+      };
+      if (!res.ok) {
+        const lineHint = data.line ? ` (line ${data.line})` : "";
+        setError(`${data.error ?? "Import failed"}${lineHint}`);
+        return;
+      }
+      setImportMessage(
+        `Imported ${data.imported ?? 0} question(s)${data.warnings?.length ? ` (${data.warnings.length} skipped)` : ""}.`
+      );
+      setImportFile(null);
+      setFilterProgramId(importProgramId);
+      await loadQuestions();
+    } catch {
+      setError("Network error during import");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function downloadCsvTemplate() {
+    const template = `question,option_a,option_b,option_c,option_d,correct,rationale,order_index
+"What is quality control?","Daily checks","Ignore SOPs","Skip calibration","Random guesses","a","QC ensures reliable results",1
+`;
+    const blob = new Blob([template], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "edooka-questions-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function remove(id: string) {
     if (!confirm("Delete this question?")) return;
     setError("");
@@ -184,6 +252,62 @@ export default function AdminQuestionsPage() {
       </div>
 
       {error ? <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+      {importMessage ? (
+        <p className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{importMessage}</p>
+      ) : null}
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-2xl border border-dashed border-primary/40 bg-soft-orange/40 p-6 space-y-4"
+      >
+        <h2 className="text-xl font-bold">Import questions from CSV</h2>
+        <p className="text-sm text-text-secondary">
+          Columns: <code className="text-xs">question, option_a, option_b, option_c, option_d, correct, rationale, order_index</code>.
+          Correct answer: <strong>a</strong>, <strong>b</strong>, <strong>c</strong>, or <strong>d</strong>. Max 500 rows per file.
+        </p>
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="min-w-[200px] flex-1">
+            <label className="block text-sm font-semibold mb-1">Program</label>
+            <select
+              value={importProgramId}
+              onChange={(e) => setImportProgramId(e.target.value)}
+              className="w-full rounded-xl border border-border-default px-3 py-2 text-sm"
+            >
+              <option value="">Select program…</option>
+              {programs.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="min-w-[200px] flex-1">
+            <label className="block text-sm font-semibold mb-1">CSV file</label>
+            <input
+              type="file"
+              accept=".csv,text/csv"
+              onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+              className="w-full text-sm"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => void importCsv()}
+            disabled={importing}
+            className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {importing ? "Importing…" : "Upload CSV"}
+          </button>
+          <button
+            type="button"
+            onClick={downloadCsvTemplate}
+            className="rounded-xl border border-border-default px-5 py-2.5 text-sm font-semibold"
+          >
+            Download template
+          </button>
+        </div>
+      </motion.div>
 
       <div className="flex flex-wrap items-center gap-3">
         <label className="text-sm font-semibold">Filter by program</label>
