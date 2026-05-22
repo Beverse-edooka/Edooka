@@ -2,6 +2,9 @@ import path from "node:path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [{ source: "/favicon.ico", destination: "/favicon.svg", permanent: true }];
+  },
   turbopack: {
     root: path.join(__dirname),
   },

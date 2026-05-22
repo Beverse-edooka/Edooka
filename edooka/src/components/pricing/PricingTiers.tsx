@@ -45,7 +45,7 @@ export function PricingTiers({ attemptId, backHref, backLabel = "← Back to res
       <div className="text-center space-y-1">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Choose a package</p>
         <h1 className="text-2xl font-extrabold">Same pricing · unlock your credential</h1>
-        <p className="text-sm text-text-muted">Secure checkout via Cashfree when configured.</p>
+        <p className="text-sm text-text-muted">Demo checkout by default — no payment gateway required.</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3 md:items-stretch">

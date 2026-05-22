@@ -34,6 +34,27 @@ export function isDemoPaymentsMode(): boolean {
   return false;
 }
 
+/** Live Cashfree only when explicitly enabled — default is demo checkout. */
+export function isLiveCashfreeEnabled(): boolean {
+  if (isDemoPaymentsMode()) return false;
+  if (process.env.CASHFREE_LIVE_PAYMENTS?.trim() !== "1") return false;
+  const appId = process.env.CASHFREE_APP_ID?.trim();
+  const secretKey = process.env.CASHFREE_SECRET_KEY?.trim();
+  return Boolean(appId && secretKey);
+}
+
+function cashfreeResponseIndicatesFailure(data: Record<string, unknown>): boolean {
+  const type = String(data.type ?? "");
+  const code = String(data.code ?? "");
+  const message = String(data.message ?? data.error ?? "").toLowerCase();
+  return (
+    type === "api_connection_error" ||
+    code === "request_failed" ||
+    message.includes("endpoint or method is not valid") ||
+    message.includes("endpoint or method")
+  );
+}
+
 function cashfreeApiBase(env: "sandbox" | "production"): string {
   return env === "production" ? "https://api.cashfree.com/pg" : "https://sandbox.cashfree.com/pg";
 }
@@ -84,14 +105,8 @@ function demoOrderResult(
 }
 
 function shouldFallbackToDemo(data: Record<string, unknown>): boolean {
-  if (isDemoPaymentsMode()) return true;
-  const type = String(data.type ?? "");
-  const message = String(data.message ?? data.error ?? "").toLowerCase();
-  return (
-    type === "api_connection_error" ||
-    message.includes("endpoint or method is not valid") ||
-    message.includes("endpoint or method")
-  );
+  if (!isLiveCashfreeEnabled()) return true;
+  return cashfreeResponseIndicatesFailure(data);
 }
 
 function cashfreeErrorMessage(data: Record<string, unknown>, status: number): string {
@@ -122,18 +137,16 @@ export async function createCashfreeOrder(
   const orderId = `edooka_${input.attemptId.replace(/-/g, "").slice(0, 12)}_${Date.now()}`;
   const returnUrl = normalizeReturnUrl(baseUrl, orderId, input.attemptId, input.bundleKey);
 
-  const appId = process.env.CASHFREE_APP_ID?.trim();
-  const secretKey = process.env.CASHFREE_SECRET_KEY?.trim();
-
-  if (!appId || !secretKey || isDemoPaymentsMode()) {
+  if (!isLiveCashfreeEnabled()) {
     return demoOrderResult(
       orderId,
       returnUrl,
-      !appId || !secretKey
-        ? "Cashfree keys missing — using demo checkout (no real payment)."
-        : "Demo payments enabled — skipping Cashfree."
+      "Demo checkout — set CASHFREE_LIVE_PAYMENTS=1 with valid keys for live Cashfree."
     );
   }
+
+  const appId = process.env.CASHFREE_APP_ID!.trim();
+  const secretKey = process.env.CASHFREE_SECRET_KEY!.trim();
 
   const env = resolveCashfreeEnvironment(appId);
   const apiBase = cashfreeApiBase(env);
@@ -174,37 +187,19 @@ export async function createCashfreeOrder(
       }),
     });
     rawText = await res.text();
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Network error";
-    if (isDemoPaymentsMode()) {
-      return demoOrderResult(orderId, returnUrl, "Cashfree unreachable — using demo checkout.");
-    }
-    return {
-      ok: false,
-      status: 502,
-      error: `Could not reach Cashfree (${env})`,
-      hint: "Check server outbound network and Cashfree status. For testing, set EDOOKA_DEMO_PAYMENTS=1 or remove CASHFREE_APP_ID.",
-      details: msg,
-    };
+  } catch {
+    return demoOrderResult(orderId, returnUrl, "Cashfree unreachable — using demo checkout.");
   }
 
   let data: Record<string, unknown> = {};
   try {
     data = rawText ? (JSON.parse(rawText) as Record<string, unknown>) : {};
   } catch {
-    if (isDemoPaymentsMode()) {
-      return demoOrderResult(orderId, returnUrl, "Cashfree returned invalid JSON — using demo checkout.");
-    }
-    return {
-      ok: false,
-      status: 502,
-      error: "Cashfree returned a non-JSON response",
-      hint:
-        env === "sandbox"
-          ? "Use sandbox keys (App ID contains TEST) or set NEXT_PUBLIC_CASHFREE_MODE=SANDBOX"
-          : "Use production keys and NEXT_PUBLIC_CASHFREE_MODE=PRODUCTION",
-      details: rawText.slice(0, 300),
-    };
+    return demoOrderResult(orderId, returnUrl, "Cashfree returned invalid JSON — using demo checkout.");
+  }
+
+  if (cashfreeResponseIndicatesFailure(data)) {
+    return demoOrderResult(orderId, returnUrl, "Cashfree rejected the request — using demo checkout.");
   }
 
   if (!res.ok) {

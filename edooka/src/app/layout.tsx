@@ -12,6 +12,10 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "edooka | Validate your skills",
   description: "Validate your skills. Get certified in 15 minutes.",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+  },
 };
 
 /** Consistent scale on Safari/macOS, iOS, and desktop browsers (avoids “zoomed out” shrink-to-fit). */

@@ -89,35 +89,16 @@ export default function StartAssessmentPage() {
   const durationLabel = program.durationLabel || ASSESSMENT_DURATION_LABEL;
 
   return (
-    <section className="mx-auto w-full max-w-2xl space-y-6 sm:space-y-8">
-      <article className="assessment-card flex min-h-[280px] flex-col rounded-2xl border border-border-default bg-white p-5 shadow-sm sm:min-h-[320px] sm:p-6">
-        <div className="flex flex-1 flex-col">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Before you begin</p>
-          <span className="mt-3 inline-block w-fit rounded-full bg-soft-orange px-3 py-0.5 text-xs font-semibold text-primary">
-            {program.badge}
-          </span>
+    <section className="mx-auto w-full max-w-lg space-y-6 rounded-2xl border border-border-default bg-white p-6 shadow-[0_12px_28px_rgba(255,149,88,0.18)] sm:space-y-8 sm:p-8">
+      <div className="space-y-2 text-center">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Before you begin</p>
+        <h1 className="text-xl font-extrabold sm:text-2xl">{program.title}</h1>
+        <p className="text-sm leading-relaxed text-text-secondary">{program.description}</p>
+        <p className="text-xs text-text-muted">
+          {program.questions} questions · {durationLabel} · {PASS_QUALIFY_COPY}
+        </p>
+      </div>
 
-          <div className="mt-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-soft-orange">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
-              <path
-                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
-                stroke="#ff6b35"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-
-          <h1 className="mt-3 text-xl font-extrabold leading-snug sm:text-2xl">{program.title}</h1>
-          <p className="mt-2 text-sm leading-relaxed text-text-secondary sm:text-base">{program.description}</p>
-          <p className="mt-3 text-sm text-text-muted">
-            {program.questions} questions · {durationLabel} · {PASS_QUALIFY_COPY}
-          </p>
-        </div>
-      </article>
-
-      <article className="rounded-2xl border border-border-default bg-white p-5 shadow-[0_12px_28px_rgba(255,149,88,0.18)] sm:p-8">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
           <label className="block text-sm font-semibold">Full name</label>
@@ -155,7 +136,6 @@ export default function StartAssessmentPage() {
           {isSubmitting ? "Starting…" : "Start assessment →"}
         </button>
       </form>
-      </article>
     </section>
   );
 }
