@@ -16,12 +16,22 @@ export type CreateCashfreeOrderResult =
   | { ok: true; orderId: string; paymentLink: string; demo?: boolean; message?: string }
   | { ok: false; status: number; error: string; hint?: string; details?: unknown };
 
+const CASHFREE_API_VERSION = "2025-01-01";
+
 /** Sandbox app ids usually contain TEST; allow override via NEXT_PUBLIC_CASHFREE_MODE. */
 export function resolveCashfreeEnvironment(appId: string): "sandbox" | "production" {
   const forced = process.env.NEXT_PUBLIC_CASHFREE_MODE?.trim().toUpperCase();
   if (forced === "PRODUCTION") return "production";
-  if (forced === "SANDBOX") return "sandbox";
+  if (forced === "SANDBOX" || forced === "TEST") return "sandbox";
   return appId.toUpperCase().includes("TEST") ? "sandbox" : "production";
+}
+
+/** Demo checkout when keys are absent or DEMO mode is forced in env. */
+export function isDemoPaymentsMode(): boolean {
+  const mode = process.env.NEXT_PUBLIC_CASHFREE_MODE?.trim().toUpperCase();
+  if (mode === "DEMO") return true;
+  if (process.env.EDOOKA_DEMO_PAYMENTS?.trim() === "1") return true;
+  return false;
 }
 
 function cashfreeApiBase(env: "sandbox" | "production"): string {
@@ -58,6 +68,42 @@ function normalizeReturnUrl(baseUrl: string, orderId: string, attemptId: string,
   return url.toString();
 }
 
+function demoOrderResult(
+  orderId: string,
+  returnUrl: string,
+  message?: string
+): CreateCashfreeOrderResult {
+  const demoUrl = `${returnUrl}&demo=1`;
+  return {
+    ok: true,
+    demo: true,
+    orderId,
+    paymentLink: demoUrl,
+    message: message ?? "Demo checkout — no Cashfree payment.",
+  };
+}
+
+function shouldFallbackToDemo(data: Record<string, unknown>): boolean {
+  if (isDemoPaymentsMode()) return true;
+  const type = String(data.type ?? "");
+  const message = String(data.message ?? data.error ?? "").toLowerCase();
+  return (
+    type === "api_connection_error" ||
+    message.includes("endpoint or method is not valid") ||
+    message.includes("endpoint or method")
+  );
+}
+
+function cashfreeErrorMessage(data: Record<string, unknown>, status: number): string {
+  const message = (data.message as string) || (data.error as string);
+  if (message) return message;
+  const type = data.type as string | undefined;
+  if (type === "api_connection_error") {
+    return "Cashfree connection failed — check API keys and sandbox vs production mode.";
+  }
+  return `Cashfree order failed (${status})`;
+}
+
 export async function createCashfreeOrder(
   input: CreateCashfreeOrderInput
 ): Promise<CreateCashfreeOrderResult> {
@@ -79,15 +125,14 @@ export async function createCashfreeOrder(
   const appId = process.env.CASHFREE_APP_ID?.trim();
   const secretKey = process.env.CASHFREE_SECRET_KEY?.trim();
 
-  if (!appId || !secretKey) {
-    const demoUrl = `${returnUrl}&demo=1`;
-    return {
-      ok: true,
-      demo: true,
+  if (!appId || !secretKey || isDemoPaymentsMode()) {
+    return demoOrderResult(
       orderId,
-      paymentLink: demoUrl,
-      message: "Cashfree keys missing — using demo checkout (no real payment).",
-    };
+      returnUrl,
+      !appId || !secretKey
+        ? "Cashfree keys missing — using demo checkout (no real payment)."
+        : "Demo payments enabled — skipping Cashfree."
+    );
   }
 
   const env = resolveCashfreeEnvironment(appId);
@@ -109,7 +154,7 @@ export async function createCashfreeOrder(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-version": "2023-08-01",
+        "x-api-version": CASHFREE_API_VERSION,
         "x-client-id": appId,
         "x-client-secret": secretKey,
       },
@@ -131,11 +176,14 @@ export async function createCashfreeOrder(
     rawText = await res.text();
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Network error";
+    if (isDemoPaymentsMode()) {
+      return demoOrderResult(orderId, returnUrl, "Cashfree unreachable — using demo checkout.");
+    }
     return {
       ok: false,
       status: 502,
       error: `Could not reach Cashfree (${env})`,
-      hint: "Check server outbound network and Cashfree status. For testing, remove CASHFREE_APP_ID to use demo mode.",
+      hint: "Check server outbound network and Cashfree status. For testing, set EDOOKA_DEMO_PAYMENTS=1 or remove CASHFREE_APP_ID.",
       details: msg,
     };
   }
@@ -144,6 +192,9 @@ export async function createCashfreeOrder(
   try {
     data = rawText ? (JSON.parse(rawText) as Record<string, unknown>) : {};
   } catch {
+    if (isDemoPaymentsMode()) {
+      return demoOrderResult(orderId, returnUrl, "Cashfree returned invalid JSON — using demo checkout.");
+    }
     return {
       ok: false,
       status: 502,
@@ -157,10 +208,14 @@ export async function createCashfreeOrder(
   }
 
   if (!res.ok) {
-    const message =
-      (data.message as string) ||
-      (data.error as string) ||
-      `Cashfree order failed (${res.status})`;
+    if (shouldFallbackToDemo(data)) {
+      return demoOrderResult(
+        orderId,
+        returnUrl,
+        "Cashfree API error — using demo checkout. Set EDOOKA_DEMO_PAYMENTS=1 to skip live payment, or fix keys and NEXT_PUBLIC_CASHFREE_MODE."
+      );
+    }
+    const message = cashfreeErrorMessage(data, res.status);
     const hint =
       env === "sandbox"
         ? "Confirm CASHFREE_APP_ID / CASHFREE_SECRET_KEY are sandbox (TEST…) keys and NEXT_PUBLIC_CASHFREE_MODE is SANDBOX or unset."
@@ -168,13 +223,18 @@ export async function createCashfreeOrder(
     return { ok: false, status: 502, error: message, hint, details: data };
   }
 
-  const paymentSessionId = data.payment_session_id as string | undefined;
+  const paymentSessionId =
+    (data.payment_session_id as string | undefined) ||
+    (data.payment_sessions_id as string | undefined);
   if (!paymentSessionId) {
+    if (shouldFallbackToDemo(data)) {
+      return demoOrderResult(orderId, returnUrl, "Cashfree did not return a session — using demo checkout.");
+    }
     return {
       ok: false,
       status: 502,
       error: "Cashfree did not return payment_session_id",
-      hint: "Verify API version 2023-08-01 and PG keys from Cashfree dashboard → Developers.",
+      hint: `Verify API version ${CASHFREE_API_VERSION} and PG keys from Cashfree dashboard → Developers.`,
       details: data,
     };
   }

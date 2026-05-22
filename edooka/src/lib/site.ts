@@ -1,5 +1,6 @@
 export const COMPANY_NAME = "edooka";
 export const COMPANY_ADDRESS = "Galaxy, Residency Rd, Bengaluru-25, India";
+export const COMPANY_PHONE = "+91 9048048509";
 export const SUPPORT_EMAIL = "support@edooka.in";
 
 export const SOCIAL_LINKS = {

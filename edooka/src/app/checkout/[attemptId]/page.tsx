@@ -136,14 +136,21 @@ function CheckoutInner() {
         hint?: string;
         demo?: boolean;
         message?: string;
+        details?: unknown;
       };
       if (!res.ok) {
-        const parts = [data.error, data.hint].filter(Boolean);
+        const errText =
+          typeof data.error === "string"
+            ? data.error
+            : typeof data.details === "object" && data.details !== null && "message" in data.details
+              ? String((data.details as { message?: string }).message)
+              : "";
+        const parts = [errText, data.hint].filter(Boolean);
         setPayError(parts.join(" — ") || "Payment could not start.");
         return;
       }
       if (data.demo && data.message) {
-        setPayError("");
+        setMessage(data.message);
       }
       if (data.paymentLink) {
         window.location.href = data.paymentLink;
@@ -216,7 +223,7 @@ function CheckoutInner() {
           onClick={() => void payNow()}
           className="w-full rounded-xl bg-primary py-3 font-semibold text-white shadow hover:bg-primary-hover disabled:opacity-50 transition-colors"
         >
-          {paying ? "Starting checkout…" : "Pay securely with Cashfree"}
+          {paying ? "Starting checkout…" : "Continue to certificate checkout"}
         </button>
         {payError ? <p className="text-sm text-red-600">{payError}</p> : null}
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SocialIcons } from "@/components/layout/SocialIcons";
-import { COMPANY_ADDRESS, COMPANY_NAME, SUPPORT_EMAIL } from "@/lib/site";
+import { COMPANY_ADDRESS, COMPANY_NAME, COMPANY_PHONE, SUPPORT_EMAIL } from "@/lib/site";
 
 /**
  * Component: Footer — edooka branding, about, legal links, copyright.
@@ -22,6 +22,12 @@ export function Footer() {
               <span className="text-lg font-bold tracking-tight text-foreground">{COMPANY_NAME}</span>
             </div>
             <p className="text-sm text-text-secondary leading-relaxed">{COMPANY_ADDRESS}</p>
+            <a
+              href={`tel:${COMPANY_PHONE.replace(/\s/g, "")}`}
+              className="block text-sm text-text-muted hover:text-primary transition-colors"
+            >
+              {COMPANY_PHONE}
+            </a>
             <a href={`mailto:${SUPPORT_EMAIL}`} className="text-sm text-text-muted hover:text-primary transition-colors">
               {SUPPORT_EMAIL}
             </a>
