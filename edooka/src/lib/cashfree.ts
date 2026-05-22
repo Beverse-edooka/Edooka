@@ -17,7 +17,11 @@ export type CreateCashfreeOrderResult =
   | { ok: true; orderId: string; paymentLink: string; demo?: boolean; message?: string }
   | { ok: false; status: number; error: string; hint?: string; details?: unknown };
 
-const CASHFREE_API_VERSION = "2025-01-01";
+/**
+ * Use the broadly supported Payments API version for PG `/orders`.
+ * Newer versions can return "endpoint or method is not valid" on some accounts.
+ */
+const CASHFREE_API_VERSION = "2023-08-01";
 
 /** Sandbox app ids usually contain TEST; allow override via NEXT_PUBLIC_CASHFREE_MODE. */
 export function resolveCashfreeEnvironment(appId: string): "sandbox" | "production" {
