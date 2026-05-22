@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 /**
@@ -11,12 +11,23 @@ function CashfreeCheckoutInner() {
   const searchParams = useSearchParams();
   const session = searchParams.get("session") ?? "";
   const env = (searchParams.get("env") ?? "sandbox").toLowerCase();
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const [autoSubmitted, setAutoSubmitted] = useState(false);
 
   const actionUrl = useMemo(() => {
     return env === "production"
       ? "https://api.cashfree.com/pg/view/sessions/checkout"
       : "https://sandbox.cashfree.com/pg/view/sessions/checkout";
   }, [env]);
+
+  useEffect(() => {
+    if (!session || !formRef.current || autoSubmitted) return;
+    const timer = window.setTimeout(() => {
+      formRef.current?.submit();
+      setAutoSubmitted(true);
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [autoSubmitted, session]);
 
   if (!session) {
     return (
@@ -32,15 +43,28 @@ function CashfreeCheckoutInner() {
   return (
     <section className="quiz-shell rounded-2xl border border-border-default bg-white p-6 text-center shadow-sm">
       <p className="text-sm text-text-secondary">Redirecting to secure Cashfree checkout…</p>
-      <form id="cashfree-redirect-form" action={actionUrl} method="post" className="hidden">
+      <form ref={formRef} action={actionUrl} method="post" className="hidden">
         <input type="hidden" name="payment_session_id" value={session} />
+        <input type="hidden" name="platform" value="web" />
+        <input
+          type="hidden"
+          name="browser_meta"
+          value={
+            typeof window !== "undefined"
+              ? window.btoa(JSON.stringify({ userAgent: window.navigator.userAgent }))
+              : ""
+          }
+        />
       </form>
-      <script
-        dangerouslySetInnerHTML={{
-          __html:
-            "window.setTimeout(function(){var f=document.getElementById('cashfree-redirect-form'); if(f){f.submit();}},80);",
-        }}
-      />
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => formRef.current?.submit()}
+          className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-hover"
+        >
+          Continue to Cashfree
+        </button>
+      </div>
     </section>
   );
 }
