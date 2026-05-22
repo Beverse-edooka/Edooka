@@ -23,9 +23,23 @@ export type CreateCashfreeOrderResult =
  */
 const CASHFREE_API_VERSION = "2023-08-01";
 
+/**
+ * Railway/Vercel dashboards sometimes store values with quotes, trailing commas,
+ * or accidental whitespace/newlines. Normalize to avoid false mode/key mismatch.
+ */
+function cleanEnv(value?: string): string {
+  if (!value) return "";
+  let out = value.trim();
+  if ((out.startsWith('"') && out.endsWith('"')) || (out.startsWith("'") && out.endsWith("'"))) {
+    out = out.slice(1, -1).trim();
+  }
+  out = out.replace(/,+$/, "").trim();
+  return out;
+}
+
 /** Sandbox app ids usually contain TEST; allow override via NEXT_PUBLIC_CASHFREE_MODE. */
 export function resolveCashfreeEnvironment(appId: string): "sandbox" | "production" {
-  const forced = process.env.NEXT_PUBLIC_CASHFREE_MODE?.trim().toUpperCase();
+  const forced = cleanEnv(process.env.NEXT_PUBLIC_CASHFREE_MODE).toUpperCase();
   if (forced === "PRODUCTION") return "production";
   if (forced === "SANDBOX" || forced === "TEST") return "sandbox";
   return appId.toUpperCase().includes("TEST") ? "sandbox" : "production";
@@ -33,18 +47,18 @@ export function resolveCashfreeEnvironment(appId: string): "sandbox" | "producti
 
 /** Demo checkout when keys are absent or DEMO mode is forced in env. */
 export function isDemoPaymentsMode(): boolean {
-  const mode = process.env.NEXT_PUBLIC_CASHFREE_MODE?.trim().toUpperCase();
+  const mode = cleanEnv(process.env.NEXT_PUBLIC_CASHFREE_MODE).toUpperCase();
   if (mode === "DEMO") return true;
-  if (process.env.EDOOKA_DEMO_PAYMENTS?.trim() === "1") return true;
+  if (cleanEnv(process.env.EDOOKA_DEMO_PAYMENTS) === "1") return true;
   return false;
 }
 
 /** Live Cashfree only when explicitly enabled — default is demo checkout. */
 export function isLiveCashfreeEnabled(): boolean {
   if (isDemoPaymentsMode()) return false;
-  if (process.env.CASHFREE_LIVE_PAYMENTS?.trim() !== "1") return false;
-  const appId = process.env.CASHFREE_APP_ID?.trim();
-  const secretKey = process.env.CASHFREE_SECRET_KEY?.trim();
+  if (cleanEnv(process.env.CASHFREE_LIVE_PAYMENTS) !== "1") return false;
+  const appId = cleanEnv(process.env.CASHFREE_APP_ID);
+  const secretKey = cleanEnv(process.env.CASHFREE_SECRET_KEY);
   return Boolean(appId && secretKey);
 }
 
@@ -137,7 +151,7 @@ export async function createCashfreeOrder(
   const name = customer.name?.trim() || "Learner";
   const phone = normalizePhone(customer.phone ?? "");
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const appUrl = cleanEnv(process.env.NEXT_PUBLIC_APP_URL);
   const baseUrl = input.appBaseUrl?.trim() || appUrl || "http://localhost:3000";
   const orderId = `edooka_${input.attemptId.replace(/-/g, "").slice(0, 12)}_${Date.now()}`;
   const returnUrl = normalizeReturnUrl(baseUrl, orderId, input.attemptId, input.bundleKey);
@@ -150,8 +164,8 @@ export async function createCashfreeOrder(
     );
   }
 
-  const appId = process.env.CASHFREE_APP_ID!.trim();
-  const secretKey = process.env.CASHFREE_SECRET_KEY!.trim();
+  const appId = cleanEnv(process.env.CASHFREE_APP_ID);
+  const secretKey = cleanEnv(process.env.CASHFREE_SECRET_KEY);
 
   const env = resolveCashfreeEnvironment(appId);
   const apiBase = cashfreeApiBase(env);
