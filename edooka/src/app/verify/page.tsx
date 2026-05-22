@@ -19,10 +19,10 @@ export default function VerifySearchPage() {
   }
 
   return (
-    <section className="mx-auto max-w-lg space-y-8">
+    <section className="quiz-shell space-y-6">
       <div className="space-y-2 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Validate certificate</p>
-        <h1 className="text-3xl font-extrabold">Verify a {COMPANY_NAME} credential</h1>
+        <h1 className="text-xl font-extrabold sm:text-2xl">Verify a {COMPANY_NAME} credential</h1>
         <p className="text-sm text-text-secondary">
           Enter the certificate number from the PDF (e.g. EDK-2026-00001) to confirm authenticity.
         </p>
@@ -30,7 +30,7 @@ export default function VerifySearchPage() {
 
       <form
         onSubmit={onSubmit}
-        className="rounded-2xl border border-border-default bg-white p-6 shadow-sm space-y-4"
+        className="rounded-2xl border border-border-default bg-white p-6 shadow-[0_12px_28px_rgba(255,149,88,0.18)] space-y-4 sm:p-8"
       >
         <div>
           <label htmlFor="cert-number" className="block text-sm font-semibold mb-1">

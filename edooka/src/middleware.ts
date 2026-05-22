@@ -4,6 +4,11 @@ import { COOKIE_NAME, verifyAdminToken } from "@/lib/admin-auth";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (pathname === "/favicon.ico") {
+    return NextResponse.rewrite(new URL("/favicon.svg", request.url));
+  }
+
   if (!pathname.startsWith("/admin")) {
     return NextResponse.next();
   }
@@ -22,5 +27,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*"],
+  matcher: ["/favicon.ico", "/admin", "/admin/:path*"],
 };

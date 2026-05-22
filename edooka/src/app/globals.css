@@ -70,6 +70,14 @@ svg {
   margin-right: auto;
 }
 
+/* Pricing step: three packages side by side (wider than funnel cards) */
+.pricing-shell {
+  width: 100%;
+  max-width: 64rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;

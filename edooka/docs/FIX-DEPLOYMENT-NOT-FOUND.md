@@ -5,10 +5,9 @@
 ## One-time Vercel setup (do this once)
 
 1. Go to [vercel.com](https://vercel.com) → **Add New** → **Project** → import **Beverse-edooka/Edooka**.
-2. **Root Directory** — choose **one** of these (not both):
-   - **Option A (recommended):** set Root Directory to **`edooka`** → leave repo-root `vercel.json` unused.
-   - **Option B:** leave Root Directory **empty** (repo root) → use the repo-root `vercel.json` that builds `edooka/`.
-3. **Framework:** Next.js (auto-detected when root is `edooka`).
+2. **Root Directory** must be **`edooka`** (Settings → General). Do **not** leave it empty.
+3. There is **no** `vercel.json` at the repo root anymore (a bad root config with `outputDirectory: edooka/.next` broke Next.js deploys). Only `edooka/vercel.json` is used.
+4. **Framework:** Next.js (auto-detected when root is `edooka`).
 4. Add env vars (see `docs/DEPLOY-VERCEL.md`), especially `DATABASE_URL` and `NEXT_PUBLIC_APP_URL=https://edooka.in`.
 5. Click **Deploy** and wait until status is **Ready**.
 

@@ -62,16 +62,16 @@ export default function VerifyPage() {
       : null;
 
   return (
-    <section className="mx-auto max-w-lg space-y-6">
+    <section className="quiz-shell space-y-6">
       <div className="space-y-2 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Certificate verification</p>
-        <h1 className="text-2xl font-extrabold font-mono">{certNumber.toUpperCase()}</h1>
+        <h1 className="text-lg font-extrabold font-mono sm:text-xl">{certNumber.toUpperCase()}</h1>
       </div>
 
       {loading ? (
         <p className="text-center text-text-muted">Checking certificate…</p>
       ) : result?.valid ? (
-        <article className="rounded-2xl border-2 border-green-500/40 bg-green-50 p-6 space-y-4 text-center">
+        <article className="rounded-2xl border-2 border-green-500/40 bg-green-50 p-5 space-y-3 text-center sm:p-6">
           <p className="text-4xl">✓</p>
           <h2 className="text-xl font-bold text-green-800">Valid {COMPANY_NAME} certificate</h2>
           <div className="text-sm text-text-secondary space-y-1">
@@ -90,7 +90,7 @@ export default function VerifyPage() {
           </div>
         </article>
       ) : (
-        <article className="rounded-2xl border border-red-200 bg-red-50 p-6 space-y-3 text-center">
+        <article className="rounded-2xl border border-red-200 bg-red-50 p-5 space-y-3 text-center sm:p-6">
           <p className="text-4xl">✕</p>
           <h2 className="text-xl font-bold text-red-800">Certificate not found</h2>
           <p className="text-sm text-text-secondary">

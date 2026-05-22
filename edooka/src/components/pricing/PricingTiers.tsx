@@ -27,7 +27,7 @@ export function PricingTiers({ attemptId, backHref, backLabel = "← Back to res
   }, []);
 
   return (
-    <section className="quiz-shell space-y-8">
+    <section className="pricing-shell space-y-8">
       {credits !== null && credits > 0 ? (
         <div className="rounded-xl border border-primary/30 bg-soft-orange px-5 py-4 text-center space-y-2">
           <p className="text-sm font-semibold text-primary">
@@ -48,7 +48,7 @@ export function PricingTiers({ attemptId, backHref, backLabel = "← Back to res
         <p className="text-sm text-text-muted">Demo checkout by default — no payment gateway required.</p>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-4 md:grid-cols-3 md:items-stretch">
         {PRICING_TIERS.map((plan) => (
           <motion.article
             key={plan.key}
