@@ -14,7 +14,14 @@ export type CreateCashfreeOrderInput = {
 };
 
 export type CreateCashfreeOrderResult =
-  | { ok: true; orderId: string; paymentLink: string; demo?: boolean; message?: string }
+  | {
+      ok: true;
+      orderId: string;
+      paymentLink: string;
+      paymentSessionId?: string;
+      demo?: boolean;
+      message?: string;
+    }
   | { ok: false; status: number; error: string; hint?: string; details?: unknown };
 
 /**
@@ -253,8 +260,10 @@ export async function createCashfreeOrder(
     };
   }
 
-  const checkoutBase = cashfreeCheckoutBase(env);
-  const paymentLink = `${checkoutBase}/pg/checkout?payment_session_id=${encodeURIComponent(paymentSessionId)}`;
+  // Old query-string checkout URLs can fail with
+  // "endpoint or method is not valid" on some accounts.
+  // Route through our own page that submits the hosted session form.
+  const paymentLink = `${baseUrl.replace(/\/$/, "")}/cashfree/checkout?session=${encodeURIComponent(paymentSessionId)}&env=${env}`;
 
-  return { ok: true, orderId, paymentLink };
+  return { ok: true, orderId, paymentLink, paymentSessionId };
 }
