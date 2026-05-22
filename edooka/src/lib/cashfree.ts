@@ -10,6 +10,7 @@ export type CreateCashfreeOrderInput = {
   bundleKey: string;
   attemptId: string;
   customer?: CashfreeCustomer;
+  appBaseUrl?: string;
 };
 
 export type CreateCashfreeOrderResult =
@@ -133,7 +134,7 @@ export async function createCashfreeOrder(
   const phone = normalizePhone(customer.phone ?? "");
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  const baseUrl = appUrl || "http://localhost:3000";
+  const baseUrl = input.appBaseUrl?.trim() || appUrl || "http://localhost:3000";
   const orderId = `edooka_${input.attemptId.replace(/-/g, "").slice(0, 12)}_${Date.now()}`;
   const returnUrl = normalizeReturnUrl(baseUrl, orderId, input.attemptId, input.bundleKey);
 

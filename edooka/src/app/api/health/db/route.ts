@@ -35,16 +35,28 @@ export async function GET() {
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
+    const isMissingProgramsTable =
+      message.toLowerCase().includes('relation "programs" does not exist') ||
+      message.toLowerCase().includes("relation 'programs' does not exist") ||
+      message.toLowerCase().includes('from "programs"');
+
     return NextResponse.json(
       {
         ok: false,
         error: message,
-        hints: [
-          "Use Neon *pooled* URL (host contains -pooler).",
-          "Remove channel_binding=require; keep sslmode=require.",
-          "Vercel → Environment Variables → DATABASE_URL → Redeploy.",
-          "Match Neon region to Vercel Functions region (Settings → Functions).",
-        ],
+        hints: isMissingProgramsTable
+          ? [
+              "DB connected, but schema/tables are missing in this database.",
+              "Run `railway run npm run db:setup` from the edooka folder.",
+              "If the command succeeds, redeploy the web service and recheck /api/health/db.",
+              "Verify DATABASE_URL points to the same Railway Postgres service used by the web app.",
+            ]
+          : [
+              "DATABASE_URL may point to a DB without the app schema.",
+              "Run `railway run npm run db:setup` from the edooka folder.",
+              "If using Railway Postgres, use the service reference `${{Postgres.DATABASE_URL}}`.",
+              "Redeploy after updating environment variables.",
+            ],
       },
       { status: 503 },
     );

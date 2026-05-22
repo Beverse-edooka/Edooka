@@ -18,10 +18,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  const forwardedProto =
+    req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || "https";
+  const forwardedHost =
+    req.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
+    req.headers.get("host")?.trim() ||
+    "";
+  const requestBaseUrl = forwardedHost ? `${forwardedProto}://${forwardedHost}` : undefined;
+
   const result = await createCashfreeOrder({
     bundleKey: body.bundleKey ?? "",
     attemptId: body.attemptId ?? "",
     customer: body.customer,
+    appBaseUrl: requestBaseUrl,
   });
 
   if (!result.ok) {
