@@ -73,17 +73,18 @@ This creates tables and seeds programs/questions.
 
 Update return / webhook URLs to `https://edooka.in/...` (same as production URL).
 
-## Fix `404 DEPLOYMENT_NOT_FOUND`
+## Fix `404 DEPLOYMENT_NOT_FOUND` (permanent)
 
-If the site shows **404: NOT_FOUND** with `Code: DEPLOYMENT_NOT_FOUND` (often after a failed or removed deploy):
+See **`docs/FIX-DEPLOYMENT-NOT-FOUND.md`** for the full checklist.
 
-1. Vercel → your **Edooka** project → **Deployments**.
-2. Open the latest **Production** deployment for branch `main`. If none exists, click **Deploy** / push a new commit to `main`.
-3. Confirm **Root Directory** is **`edooka`** (Settings → General).
-4. **Domains** → ensure `edooka.in` is assigned to this project (not an old deleted project).
-5. After a successful deploy, open the **Production** URL from the deployment card (e.g. `https://edooka.vercel.app`) and test before using the custom domain.
+Quick version:
 
-This error is on Vercel’s side (missing or deleted deployment), not in the Next.js app code.
+1. One Vercel project for this repo; **Root Directory = `edooka`** (or repo root + root `vercel.json`).
+2. **Domains:** `edooka.in` only on that project; remove from old projects.
+3. Push to `main` → wait for **Ready** → test `https://<project>.vercel.app/api/health`.
+4. Then use `https://edooka.in` — not old preview links.
+
+This error means **no live deployment** at that URL, not a page bug in the app.
 
 ## Reduce latency (Vercel + Neon)
 
