@@ -174,7 +174,7 @@ export default function QuizPage() {
 
   if (!attempt) {
     return (
-      <section className="mx-auto max-w-3xl rounded-2xl border border-border-default bg-white p-8 text-center">
+      <section className="mx-auto max-w-lg rounded-2xl border border-border-default bg-white p-8 text-center">
         <p className="text-text-muted">Loading assessment…</p>
       </section>
     );
@@ -182,7 +182,7 @@ export default function QuizPage() {
 
   if (quizLoading) {
     return (
-      <section className="mx-auto max-w-3xl rounded-2xl border border-border-default bg-white p-8 text-center">
+      <section className="mx-auto max-w-lg rounded-2xl border border-border-default bg-white p-8 text-center">
         <p className="text-text-muted">Loading exam questions…</p>
       </section>
     );
@@ -229,7 +229,7 @@ export default function QuizPage() {
   }
 
   return (
-    <section className="mx-auto flex max-h-[min(100dvh-6rem,820px)] w-full max-w-3xl flex-col gap-3 rounded-2xl border border-border-default bg-white p-4 shadow-[0_10px_28px_rgba(255,149,88,0.22)] sm:gap-4 sm:p-5">
+    <section className="mx-auto flex w-full max-w-lg flex-col gap-3 rounded-2xl border border-border-default bg-white p-5 shadow-[0_12px_28px_rgba(255,149,88,0.18)] sm:gap-4 sm:p-6">
       <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-foreground">{quizProgram.title}</p>
