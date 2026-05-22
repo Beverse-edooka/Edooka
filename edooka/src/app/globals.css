@@ -62,7 +62,7 @@ svg {
   max-width: 100%;
 }
 
-/* Quiz / start forms — fixed readable width (matches localhost card) */
+/* Assessment funnel cards (start → quiz → result → checkout): same width as quiz */
 .quiz-shell {
   width: 100%;
   max-width: 32rem;

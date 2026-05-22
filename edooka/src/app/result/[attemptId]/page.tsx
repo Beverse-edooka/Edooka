@@ -174,7 +174,7 @@ export default function ResultPage() {
     <>
       <AnimatePresence>{showConfetti && <Confetti />}</AnimatePresence>
 
-      <section className="mx-auto max-w-3xl space-y-8 rounded-2xl border border-border-default bg-white p-6 shadow-[0_12px_26px_rgba(255,149,88,0.24)]">
+      <section className="quiz-shell space-y-8 rounded-2xl border border-border-default bg-white p-6 shadow-[0_12px_28px_rgba(255,149,88,0.24)] sm:p-8">
         {passed ? (
           <div className="space-y-8">
             <motion.div

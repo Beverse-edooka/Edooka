@@ -195,7 +195,7 @@ function SuccessInner() {
   }, [attempt, attemptIdParam, bundleKey, certNumber, params.purchaseId, recipientName, programTitle, verifyUrl]);
 
   return (
-    <section className="mx-auto w-full max-w-2xl space-y-6 sm:space-y-8">
+    <section className="quiz-shell space-y-6 sm:space-y-8">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}

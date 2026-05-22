@@ -166,7 +166,7 @@ function CheckoutInner() {
 
   if (!tier) {
     return (
-      <section className="mx-auto max-w-3xl space-y-4">
+      <section className="quiz-shell space-y-4">
         <h1 className="text-2xl font-bold">Invalid package</h1>
         <Link href="/#assessments" className="text-primary font-semibold">
           ← Assessments
@@ -176,7 +176,7 @@ function CheckoutInner() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-3xl space-y-8 text-center">
+    <section className="quiz-shell space-y-8 text-center">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Checkout</p>
         <h1 className="mt-1 text-3xl font-extrabold">{tier.tier}</h1>
@@ -233,7 +233,7 @@ function CheckoutInner() {
         </p>
       </motion.article>
 
-      <article className="mx-auto w-full max-w-lg rounded-2xl border border-primary/30 bg-soft-orange p-5 space-y-3 text-center">
+      <article className="rounded-2xl border border-primary/30 bg-soft-orange p-5 space-y-3 text-center">
         <h3 className="text-xl font-bold">Referral coins</h3>
         <p className="text-text-secondary">
           Current coins: <strong>{coins}</strong> (5 coins = 1 certificate unlock)

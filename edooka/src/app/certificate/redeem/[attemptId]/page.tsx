@@ -168,7 +168,7 @@ export default function RedeemCertificatePage() {
 
   if (error) {
     return (
-      <section className="mx-auto max-w-lg space-y-4 text-center">
+      <section className="quiz-shell space-y-4 text-center">
         <h1 className="text-2xl font-bold">Certificate unavailable</h1>
         <p className="text-text-secondary">{error}</p>
         <Link
@@ -186,7 +186,7 @@ export default function RedeemCertificatePage() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-2xl space-y-6 sm:space-y-8">
+    <section className="quiz-shell space-y-6 sm:space-y-8">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}

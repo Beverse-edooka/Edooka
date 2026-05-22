@@ -57,7 +57,7 @@ export default function StartAssessmentPage() {
 
   if (!program) {
     return (
-      <section className="mx-auto max-w-lg space-y-4 rounded-2xl border border-border-default bg-white p-8 shadow-sm">
+      <section className="quiz-shell space-y-4 rounded-2xl border border-border-default bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-bold">Assessment not found</h1>
         <p className="text-text-secondary">This program slug is not in our catalog.</p>
         <Link href="/#assessments" className="font-semibold text-primary hover:underline">
@@ -89,7 +89,7 @@ export default function StartAssessmentPage() {
   const durationLabel = program.durationLabel || ASSESSMENT_DURATION_LABEL;
 
   return (
-    <section className="mx-auto w-full max-w-lg space-y-6 rounded-2xl border border-border-default bg-white p-6 shadow-[0_12px_28px_rgba(255,149,88,0.18)] sm:space-y-8 sm:p-8">
+    <section className="quiz-shell space-y-6 rounded-2xl border border-border-default bg-white p-6 shadow-[0_12px_28px_rgba(255,149,88,0.18)] sm:space-y-8 sm:p-8">
       <div className="space-y-2 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Before you begin</p>
         <h1 className="text-xl font-extrabold sm:text-2xl">{program.title}</h1>
