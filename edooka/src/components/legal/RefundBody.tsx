@@ -10,7 +10,6 @@ export default function RefundBody() {
         forms an integral part of our Terms and Conditions. By making a purchase on the Platform, you confirm that you
         have read, understood, and agree to this Policy.
       </p>
-
       <h2>2. What you are purchasing</h2>
       <p>
         Edooka offers skill assessments and, upon successful qualification, the option to purchase a digital skill
@@ -25,7 +24,6 @@ export default function RefundBody() {
         Pricing is inclusive of applicable taxes unless otherwise stated. We reserve the right to revise pricing from time
         to time. Such revisions will not apply retrospectively to purchases already completed.
       </p>
-
       <h2>3. Refund eligibility</h2>
       <p>
         Summary: A full refund is available within 7 days of purchase only if no certificate has been claimed,
@@ -74,7 +72,6 @@ export default function RefundBody() {
         gateway partner. Refunds in such cases will be processed based on the outcome of the investigation and applicable
         law.
       </p>
-
       <h2>4. Non-refundable situations</h2>
       <p>The following situations do NOT qualify for a refund:</p>
       <ul>
@@ -93,7 +90,6 @@ export default function RefundBody() {
         </li>
         <li>The request was received more than seven (7) days after the date of purchase</li>
       </ul>
-
       <h2>5. How to request a refund</h2>
       <p>To request a refund, follow these steps:</p>
       <ol>
@@ -114,7 +110,6 @@ export default function RefundBody() {
         days to the original payment method used for the purchase. Refund timelines depend in part on your bank or card
         issuer. While we process refunds promptly, it may take additional time for the refund to reflect in your account.
       </p>
-
       <h2>6. Refund decision</h2>
       <p>
         Beverse Innovations reserves the right to make the final decision on all refund requests, applying this Policy
@@ -122,7 +117,6 @@ export default function RefundBody() {
         of your request. Repeated refund requests from the same user, requests that appear to be fraudulent, or requests
         made in bad faith may be declined.
       </p>
-
       <h2>7. Bundle credits</h2>
       <p>Bundle credits (purchased as part of a Bundle of 3 or Bundle of 5) have the following characteristics:</p>
       <ul>
@@ -140,7 +134,6 @@ export default function RefundBody() {
           future, subject to availability.
         </li>
       </ul>
-
       <h2>8. Chargebacks and payment disputes</h2>
       <p>
         If you believe a refund is due to you, we strongly encourage you to contact us first at support@edooka.in. Filing a
@@ -157,21 +150,18 @@ export default function RefundBody() {
         We will cooperate fully with any genuine chargeback investigation conducted by your bank or our payment gateway
         partner, and will provide transaction records, communication history, and delivery evidence as required.
       </p>
-
       <h2>9. Tax implications</h2>
       <p>
         Refunds, where issued, will be for the full amount paid, including applicable taxes (such as Goods and Services
         Tax). If you have claimed input tax credit on the purchase (in the case of business purchasers), you are responsible
         for reversing such credit in accordance with applicable tax law.
       </p>
-
       <h2>10. Changes to this Refund Policy</h2>
       <p>
         We may update this Refund Policy from time to time. The updated Policy will be posted on the Platform with a
         revised effective date. Material changes will be communicated to registered users by email. The Policy in effect
         at the time of your purchase will govern that purchase.
       </p>
-
       <h2>11. Contact us</h2>
       <p>For refund requests, questions, or concerns about this Policy, please contact:</p>
       <p>Email: support@edooka.in</p>

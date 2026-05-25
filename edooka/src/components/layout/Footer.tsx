@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { SocialIcons } from "@/components/layout/SocialIcons";
-import { COMPANY_ADDRESS, COMPANY_NAME, COMPANY_PHONE, SUPPORT_EMAIL } from "@/lib/site";
+import {
+  COMPANY_ADDRESS,
+  COMPANY_LEGAL_NAME,
+  COMPANY_NAME,
+  COMPANY_PHONE,
+  SUPPORT_EMAIL,
+} from "@/lib/site";
 
 /**
  * Component: Footer — edooka branding, about, legal links, copyright.
@@ -11,27 +17,30 @@ export function Footer() {
   return (
     <footer className="mt-16 border-t border-border-default bg-soft-orange/40">
       <div className="mx-auto max-w-6xl px-4 py-12">
-
         <div className="grid gap-10 md:grid-cols-3">
-          <div className="space-y-3">
-
+          <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary text-sm font-bold text-white">
                 e
               </span>
               <span className="text-lg font-bold tracking-tight text-foreground">{COMPANY_NAME}</span>
             </div>
-            <p className="text-sm text-text-secondary leading-relaxed">{COMPANY_ADDRESS}</p>
-            <a
-              href={`tel:${COMPANY_PHONE.replace(/\s/g, "")}`}
-              className="block text-sm text-text-muted hover:text-primary transition-colors"
-            >
-              {COMPANY_PHONE}
-            </a>
-            <a href={`mailto:${SUPPORT_EMAIL}`} className="text-sm text-text-muted hover:text-primary transition-colors">
-              {SUPPORT_EMAIL}
-            </a>
-            <SocialIcons />
+
+            <div className="text-sm leading-snug text-text-secondary">
+              <p>{COMPANY_LEGAL_NAME}</p>
+              <p className="mt-0.5">{COMPANY_ADDRESS}</p>
+              <p className="mt-2">
+                <a href={`mailto:${SUPPORT_EMAIL}`} className="text-text-muted hover:text-primary transition-colors">
+                  {SUPPORT_EMAIL}
+                </a>
+                {" | "}
+                <a href={`tel:${COMPANY_PHONE.replace(/\s/g, "")}`} className="text-text-muted hover:text-primary transition-colors">
+                  {COMPANY_PHONE}
+                </a>
+              </p>
+            </div>
+
+            <SocialIcons className="mt-1" />
           </div>
 
           <div className="space-y-3">

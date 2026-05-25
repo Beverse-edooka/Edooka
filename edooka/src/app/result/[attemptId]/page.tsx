@@ -242,8 +242,10 @@ export default function ResultPage() {
                     Download certificate again
                   </Link>
                   <CertificateShareButtons
+                    courseName={courseTitle}
+                    programSlug={attempt?.slug ?? slug}
                     verifyUrl={verifyUrlForCertificate(issuedCert.certificateNumber)}
-                    programTitle={courseTitle}
+                    certificateNumber={issuedCert.certificateNumber}
                     className="pt-2"
                   />
                 </>

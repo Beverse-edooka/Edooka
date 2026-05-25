@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { CertificateShareButtons } from "@/components/certificate/ShareButtons";
+import { getProgramBySlug } from "@/data/programs";
 import { verifyUrlForCertificate } from "@/lib/app-url";
 import { certificateNumberForAttempt } from "@/lib/certificate";
 import {
@@ -17,17 +18,35 @@ import { downloadCertificatePng } from "@/lib/download-certificate";
 import { getCertificateCountForBundle } from "@/lib/pricing";
 import { normalizeLearnerAttempt } from "@/lib/learner";
 import { persistCertificateIssue } from "@/lib/persist-certificate-issue";
-import { EDOOKA_ATTEMPT_KEY, readLearnerProfile, type ActiveAttempt } from "@/lib/session-keys";
+import {
+  EDOOKA_ATTEMPT_KEY,
+  persistLearnerProfile,
+  readLearnerProfile,
+  type ActiveAttempt,
+} from "@/lib/session-keys";
+
+function firstNonEmpty(...values: (string | undefined | null)[]): string {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) return trimmed;
+  }
+  return "";
+}
 
 function SuccessInner() {
   const params = useParams<{ purchaseId: string }>();
   const searchParams = useSearchParams();
   const attemptIdParam = searchParams.get("attemptId") ?? "";
+  const slugParam = searchParams.get("slug") ?? "";
   const bundleKey = searchParams.get("bundle") ?? "single";
   const demo = searchParams.get("demo") === "1";
   const certificateCredits = getCertificateCountForBundle(bundleKey);
 
   const [attempt, setAttempt] = useState<ActiveAttempt | null>(null);
+  const [profileReady, setProfileReady] = useState(false);
+  const [holderName, setHolderName] = useState("");
+  const [courseTitle, setCourseTitle] = useState("");
+  const [programSlug, setProgramSlug] = useState("");
   const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "skipped" | "error">("idle");
   const [issuedDateLabel, setIssuedDateLabel] = useState("");
   const [remainingCredits, setRemainingCredits] = useState(0);
@@ -43,7 +62,7 @@ function SuccessInner() {
     if (raw) {
       try {
         const data = normalizeLearnerAttempt(JSON.parse(raw) as ActiveAttempt);
-        if (data.attemptId === attemptIdParam) loaded = data;
+        if (!attemptIdParam || data.attemptId === attemptIdParam) loaded = data;
       } catch {
         /* ignore */
       }
@@ -52,17 +71,66 @@ function SuccessInner() {
       const fromDisk = readLearnerProfile(attemptIdParam);
       if (fromDisk) loaded = normalizeLearnerAttempt(fromDisk);
     }
-    if (loaded) setAttempt(loaded);
-  }, [attemptIdParam]);
+    if (!loaded && attemptIdParam && slugParam) {
+      const catalog = getProgramBySlug(slugParam);
+      if (catalog) {
+        loaded = {
+          attemptId: attemptIdParam,
+          slug: slugParam,
+          programTitle: catalog.title,
+          programCategory: catalog.category,
+          name: "",
+          email: "",
+          phone: "",
+          startedAt: Date.now(),
+        };
+      }
+    }
+    if (loaded) {
+      persistLearnerProfile(loaded);
+      setAttempt(loaded);
+      setProgramSlug(loaded.slug);
+      if (loaded.name.trim()) setHolderName(loaded.name.trim());
+      if (loaded.programTitle.trim()) setCourseTitle(loaded.programTitle.trim());
+    } else if (slugParam) {
+      const catalog = getProgramBySlug(slugParam);
+      if (catalog) {
+        setProgramSlug(slugParam);
+        setCourseTitle(catalog.title);
+      }
+    }
+    setProfileReady(true);
+  }, [attemptIdParam, slugParam]);
 
-  const recipientName = attempt?.name ?? "Learner";
-  const programTitle = attempt?.programTitle ?? "Healthcare assessment";
+  const recipientName = firstNonEmpty(holderName, attempt?.name) || (profileReady ? "Learner" : "…");
+  const programTitle =
+    firstNonEmpty(courseTitle, attempt?.programTitle) ||
+    (profileReady && programSlug ? getProgramBySlug(programSlug)?.title : "") ||
+    (profileReady ? "Healthcare assessment" : "…");
+  const shareSlug = programSlug || attempt?.slug || slugParam;
+
   const verifyUrl = useMemo(
     () => issuedVerifyUrl || (certNumber ? verifyUrlForCertificate(certNumber) : ""),
     [certNumber, issuedVerifyUrl]
   );
 
-  // On payment success: add bundle credits, consume one for this attempt, persist + email (once).
+  useEffect(() => {
+    if (!certNumber) return;
+    let cancelled = false;
+    void fetch(`/api/verify/${encodeURIComponent(certNumber)}`)
+      .then((res) => res.json())
+      .then((data: { valid?: boolean; holderName?: string; programTitle?: string; programSlug?: string }) => {
+        if (cancelled || !data.valid) return;
+        if (data.holderName?.trim()) setHolderName(data.holderName.trim());
+        if (data.programTitle?.trim()) setCourseTitle(data.programTitle.trim());
+        if (data.programSlug?.trim()) setProgramSlug(data.programSlug.trim());
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [certNumber]);
+
   useEffect(() => {
     if (typeof window === "undefined" || !attempt || fulfillmentDone) return;
     const attemptId = attemptIdParam || attempt.attemptId;
@@ -77,10 +145,11 @@ function SuccessInner() {
       number = issued?.certificateNumber ?? certificateNumberForAttempt(attemptId);
     } else {
       addCreditsFromPurchase(params.purchaseId, certificateCredits);
+      const titleForWallet = firstNonEmpty(courseTitle, attempt.programTitle) || programTitle;
       const redeem = redeemCertificateCredit({
         attemptId,
         slug: attempt.slug,
-        programTitle,
+        programTitle: titleForWallet,
         purchaseId: params.purchaseId,
       });
       number = redeem.ok
@@ -127,6 +196,23 @@ function SuccessInner() {
       }
 
       if (persisted.verifyUrl) setIssuedVerifyUrl(persisted.verifyUrl);
+      if (persisted.holderName?.trim()) setHolderName(persisted.holderName.trim());
+      if (persisted.programTitle?.trim()) setCourseTitle(persisted.programTitle.trim());
+      if (persisted.programSlug?.trim()) setProgramSlug(persisted.programSlug.trim());
+
+      const merged: ActiveAttempt = {
+        ...attempt,
+        name: firstNonEmpty(persisted.holderName, attempt.name) || attempt.name,
+        programTitle: firstNonEmpty(persisted.programTitle, attempt.programTitle) || attempt.programTitle,
+        slug: persisted.programSlug?.trim() || attempt.slug,
+      };
+      setAttempt(merged);
+      persistLearnerProfile(merged);
+      try {
+        sessionStorage.setItem(EDOOKA_ATTEMPT_KEY, JSON.stringify(merged));
+      } catch {
+        /* ignore */
+      }
 
       const email = attempt.email?.trim();
       if (!email || !email.includes("@")) return;
@@ -159,6 +245,7 @@ function SuccessInner() {
     attemptIdParam,
     bundleKey,
     certificateCredits,
+    courseTitle,
     fulfillmentDone,
     params.purchaseId,
     programTitle,
@@ -192,7 +279,7 @@ function SuccessInner() {
         verifyUrl: verifyUrl || verifyUrlForCertificate(certNumber),
       },
     });
-  }, [attempt, attemptIdParam, bundleKey, certNumber, params.purchaseId, recipientName, programTitle, verifyUrl]);
+  }, [attempt, bundleKey, certNumber, params.purchaseId, recipientName, programTitle, verifyUrl]);
 
   return (
     <section className="quiz-shell space-y-6 sm:space-y-8">
@@ -232,20 +319,25 @@ function SuccessInner() {
         </p>
       </motion.div>
 
-      <div className="flex flex-wrap justify-center gap-3">
+      <div className="flex flex-col items-center gap-4">
         <motion.button
           type="button"
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.98 }}
           disabled={!certNumber || !!issueError}
           onClick={() => void downloadCert()}
-          className="rounded-xl bg-primary px-5 py-2.5 font-semibold text-white shadow disabled:opacity-50 sm:px-6 sm:py-3"
+          className="w-full max-w-sm rounded-xl bg-primary px-5 py-2.5 font-semibold text-white shadow disabled:opacity-50 sm:px-6 sm:py-3"
           title={issueError ? "Register certificate first (refresh after fixing the error above)" : undefined}
         >
           Download certificate
         </motion.button>
-        {verifyUrl ? (
-          <CertificateShareButtons verifyUrl={verifyUrl} programTitle={programTitle} />
+        {verifyUrl && shareSlug ? (
+          <CertificateShareButtons
+            courseName={programTitle}
+            programSlug={shareSlug}
+            verifyUrl={verifyUrl}
+            certificateNumber={certNumber || undefined}
+          />
         ) : null}
       </div>
 

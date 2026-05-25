@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
   let body: {
     bundleKey?: string;
     attemptId?: string;
+    programSlug?: string;
     customer?: { name?: string; email?: string; phone?: string };
   };
   try {
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
   const result = await createCashfreeOrder({
     bundleKey: body.bundleKey ?? "",
     attemptId: body.attemptId ?? "",
+    programSlug: body.programSlug,
     customer: body.customer,
     appBaseUrl: requestBaseUrl,
   });

@@ -9,6 +9,8 @@ export type CashfreeCustomer = {
 export type CreateCashfreeOrderInput = {
   bundleKey: string;
   attemptId: string;
+  /** Program slug — included on the payment return URL so success can hydrate after redirect. */
+  programSlug?: string;
   customer?: CashfreeCustomer;
   appBaseUrl?: string;
 };
@@ -107,11 +109,19 @@ function normalizePhone(raw: string): string {
   return "9999999999";
 }
 
-function normalizeReturnUrl(baseUrl: string, orderId: string, attemptId: string, bundleKey: string): string {
+function normalizeReturnUrl(
+  baseUrl: string,
+  orderId: string,
+  attemptId: string,
+  bundleKey: string,
+  programSlug?: string
+): string {
   const base = baseUrl.replace(/\/$/, "");
   const url = new URL(`${base}/success/${encodeURIComponent(orderId)}`);
   url.searchParams.set("attemptId", attemptId);
   url.searchParams.set("bundle", bundleKey);
+  const slug = programSlug?.trim();
+  if (slug) url.searchParams.set("slug", slug);
   return url.toString();
 }
 
@@ -161,7 +171,13 @@ export async function createCashfreeOrder(
   const appUrl = cleanEnv(process.env.NEXT_PUBLIC_APP_URL);
   const baseUrl = input.appBaseUrl?.trim() || appUrl || "http://localhost:3000";
   const orderId = `edooka_${input.attemptId.replace(/-/g, "").slice(0, 12)}_${Date.now()}`;
-  const returnUrl = normalizeReturnUrl(baseUrl, orderId, input.attemptId, input.bundleKey);
+  const returnUrl = normalizeReturnUrl(
+    baseUrl,
+    orderId,
+    input.attemptId,
+    input.bundleKey,
+    input.programSlug
+  );
 
   if (!isLiveCashfreeEnabled()) {
     return demoOrderResult(

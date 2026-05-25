@@ -17,7 +17,6 @@ export default function PrivacyBody() {
         By accessing or using the Platform, you confirm that you have read, understood, and agree to this Policy. If you
         do not agree with this Policy, please do not use the Platform.
       </p>
-
       <h2>2. Definitions</h2>
       <p>
         &quot;Data Fiduciary&quot; means Beverse Innovations Private Limited, which determines the purposes and means of
@@ -35,7 +34,6 @@ export default function PrivacyBody() {
         &quot;Services&quot; means the skill assessment, certification, and related services offered by Edooka through
         the Platform.
       </p>
-
       <h2>3. Personal data we collect</h2>
       <h3>3.1 Data you provide directly</h3>
       <p>We collect personal data that you voluntarily provide when you use the Platform, including:</p>
@@ -63,7 +61,6 @@ export default function PrivacyBody() {
         We may receive data about you from third-party service providers such as our payment gateway, email service
         provider, and analytics partners. Such data is used only for the purposes described in this Policy.
       </p>
-
       <h2>4. How we use your personal data</h2>
       <p>We process your personal data for the following purposes, based on the legal grounds specified:</p>
       <ul>
@@ -94,7 +91,6 @@ export default function PrivacyBody() {
           obligation
         </li>
       </ul>
-
       <h2>5. Sharing of personal data</h2>
       <p>
         We do not sell your personal data. We share your personal data only in the following circumstances and with the
@@ -143,7 +139,6 @@ export default function PrivacyBody() {
         issued, the issue date, and the certificate number. By accepting a certificate, you consent to this limited public
         disclosure for verification purposes.
       </p>
-
       <h2>6. Data retention</h2>
       <p>
         We retain your personal data only for as long as necessary to fulfill the purposes for which it was collected,
@@ -165,7 +160,6 @@ export default function PrivacyBody() {
         <li>Marketing communications data: retained until you withdraw consent or unsubscribe.</li>
         <li>Server logs and technical data: retained for up to twelve (12) months.</li>
       </ul>
-
       <h2>7. Your rights</h2>
       <p>Under the DPDP Act 2023 and applicable law, you have the following rights with respect to your personal data:</p>
       <h3>7.1 Right to access information</h3>
@@ -204,7 +198,6 @@ export default function PrivacyBody() {
         To exercise any of these rights, contact us at support@edooka.in or write to our Grievance Officer (see Section
         12). We will respond to verified requests within the timelines required by applicable law.
       </p>
-
       <h2>8. Cookies and tracking technologies</h2>
       <p>
         We use cookies and similar tracking technologies on the Platform to keep you signed in, remember your preferences,
@@ -212,7 +205,6 @@ export default function PrivacyBody() {
         default. You can configure your browser to refuse cookies, but some parts of the Platform may not function
         properly.
       </p>
-
       <h2>9. Data security</h2>
       <p>
         We implement reasonable security practices and procedures including TLS encryption for data in transit,
@@ -220,20 +212,17 @@ export default function PrivacyBody() {
         PCI-DSS compliant payment processors. In the event of a personal data breach, we will notify the Data Protection
         Board of India and affected data principals as required by applicable law.
       </p>
-
       <h2>10. Children and minors</h2>
       <p>
         The Platform is intended for use by individuals aged eighteen (18) years and above. We do not knowingly collect
         personal data from individuals under eighteen. If a minor has provided personal data, please contact us at
         support@edooka.in for deletion.
       </p>
-
       <h2>11. International data transfers</h2>
       <p>
         Where personal data is transferred outside India to service providers, we ensure adequate safeguards are in place.
         We do not transfer personal data to any country restricted by the Government of India under the DPDP Act 2023.
       </p>
-
       <h2>12. Grievance officer</h2>
       <p>
         In accordance with the Information Technology Act, 2000 and the DPDP Act 2023, the contact details of our
@@ -247,14 +236,12 @@ export default function PrivacyBody() {
         Karnataka, India
       </p>
       <p>We will acknowledge communication within seventy-two (72) hours and respond within fifteen (15) days.</p>
-
       <h2>13. Changes to this Privacy Policy</h2>
       <p>
         {" "}
         We may update this Privacy Policy from time to time. Material changes will be notified by email or a prominent
         notice on the Platform. Your continued use of the Platform after the effective date constitutes acceptance.
       </p>
-
       <h2>14. Contact us</h2>
       <p>If you have questions, contact us at:</p>
       <p>Email: support@edooka.in</p>

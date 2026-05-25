@@ -10,7 +10,16 @@ export async function persistCertificateIssue(input: {
   certificateNumber: string;
   orderId: string;
   bundleKey?: string;
-}): Promise<{ ok: true; verifyUrl: string } | { ok: false; error: string }> {
+}): Promise<
+  | {
+      ok: true;
+      verifyUrl: string;
+      holderName?: string;
+      programTitle?: string;
+      programSlug?: string;
+    }
+  | { ok: false; error: string }
+> {
   const { attempt, certificateNumber, orderId, bundleKey = "single" } = input;
 
   try {
@@ -44,8 +53,19 @@ export async function persistCertificateIssue(input: {
       return { ok: false, error };
     }
 
-    const data = (await res.json()) as { verifyUrl?: string };
-    return { ok: true, verifyUrl: data.verifyUrl ?? "" };
+    const data = (await res.json()) as {
+      verifyUrl?: string;
+      holderName?: string;
+      programTitle?: string;
+      programSlug?: string;
+    };
+    return {
+      ok: true,
+      verifyUrl: data.verifyUrl ?? "",
+      holderName: data.holderName,
+      programTitle: data.programTitle,
+      programSlug: data.programSlug,
+    };
   } catch {
     return { ok: false, error: "Network error while registering certificate" };
   }

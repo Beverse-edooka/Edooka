@@ -28,9 +28,11 @@ function LinkedInIcon({ className }: IconProps) {
 
 
 
-export function SocialIcons() {
+type SocialIconsProps = { className?: string };
+
+export function SocialIcons({ className = "" }: SocialIconsProps) {
   return (
-    <div className="flex flex-wrap items-center gap-4 pt-1">
+    <div className={`flex flex-wrap items-center gap-4 ${className}`.trim()}>
       <a
         href={"https://www.instagram.com/edooka.in"}
         target="_blank"

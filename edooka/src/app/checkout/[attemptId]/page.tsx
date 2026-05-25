@@ -6,7 +6,12 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { getTierByKey } from "@/lib/pricing";
 import { normalizeLearnerAttempt } from "@/lib/learner";
-import { EDOOKA_ATTEMPT_KEY, readLearnerProfile, type ActiveAttempt } from "@/lib/session-keys";
+import {
+  EDOOKA_ATTEMPT_KEY,
+  persistLearnerProfile,
+  readLearnerProfile,
+  type ActiveAttempt,
+} from "@/lib/session-keys";
 
 /**
  * Page: Checkout
@@ -43,7 +48,10 @@ function CheckoutInner() {
       const fromDisk = readLearnerProfile(params.attemptId);
       if (fromDisk) loaded = normalizeLearnerAttempt(fromDisk);
     }
-    if (loaded) setAttempt(loaded);
+    if (loaded) {
+      persistLearnerProfile(loaded);
+      setAttempt(loaded);
+    }
     const saved = sessionStorage.getItem("edooka_last_result_path");
     if (saved?.includes(params.attemptId)) {
       const pricingPath = saved.replace(`/result/${params.attemptId}`, `/result/${params.attemptId}/pricing`);
@@ -102,7 +110,7 @@ function CheckoutInner() {
         setMessage("Redeemed successfully! Certificate unlocked using referral coins.");
         const oid = `coins_${params.attemptId}`;
         router.push(
-          `/success/${oid}?attemptId=${encodeURIComponent(params.attemptId)}&bundle=${encodeURIComponent(bundleKey)}&demo=1`
+          `/success/${oid}?attemptId=${encodeURIComponent(params.attemptId)}&bundle=${encodeURIComponent(bundleKey)}&slug=${encodeURIComponent(attempt?.slug ?? "")}&demo=1`
         );
       })
       .catch(() => setMessage("Network error while redeeming coins."))
@@ -123,6 +131,7 @@ function CheckoutInner() {
         body: JSON.stringify({
           bundleKey: tier.key,
           attemptId: attempt.attemptId,
+          programSlug: attempt.slug,
           customer: {
             name: attempt.name,
             email: attempt.email,

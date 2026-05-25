@@ -95,6 +95,9 @@ export async function POST(req: NextRequest) {
         ok: true,
         certificateNumber: certNumber,
         verifyUrl: existingCert.verificationUrl,
+        holderName: name,
+        programTitle: program.title,
+        programSlug: slug,
       });
     }
 
@@ -151,7 +154,14 @@ export async function POST(req: NextRequest) {
       verificationUrl: verifyUrl,
     });
 
-    return NextResponse.json({ ok: true, certificateNumber: certNumber, verifyUrl });
+    return NextResponse.json({
+      ok: true,
+      certificateNumber: certNumber,
+      verifyUrl,
+      holderName: name,
+      programTitle: program.title,
+      programSlug: slug,
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Issue failed";
     console.error("[certificate/issue]", message, e);

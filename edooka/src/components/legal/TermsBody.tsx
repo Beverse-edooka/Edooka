@@ -21,7 +21,6 @@ export default function TermsBody() {
         which is incorporated by reference into these Terms.
       </p>
       <p>If you do not agree to these Terms, you may not access or use the Platform.</p>
-
       <h2>2. Definitions</h2>
       <p>
         &quot;Account&quot; means the personal record created when you register with the Platform.
@@ -42,7 +41,6 @@ export default function TermsBody() {
         &quot;Verification URL&quot; means the public web address linked to a Certificate that allows third parties to
         verify the authenticity of the Certificate.
       </p>
-
       <h2>3. Eligibility and account registration</h2>
       <h3>3.1 Eligibility</h3>
       <p>
@@ -69,7 +67,6 @@ export default function TermsBody() {
         support@edooka.in. We are not liable for any losses arising from unauthorized use of your account unless caused
         by our gross negligence.
       </p>
-
       <h2>4. Description of services</h2>
       <p>Edooka offers the following Services through the Platform:</p>
       <ul>
@@ -92,7 +89,6 @@ export default function TermsBody() {
         without notice. We will use reasonable efforts to notify you in advance of material changes affecting
         Certificates you have already earned.
       </p>
-
       <h2>5. Nature of the Certificate (Important)</h2>
       <h3>5.1 What the Certificate is</h3>
       <p>
@@ -133,7 +129,6 @@ export default function TermsBody() {
         CPD/CME credit and is not endorsed by NMC, INC, MCI, or state professional councils. Issued by Beverse
         Innovations Pvt. Ltd. under the Edooka brand.&quot;
       </p>
-
       <h2>6. Assessment rules</h2>
       <h3>6.1 Conduct during Assessments</h3>
       <p>
@@ -181,7 +176,6 @@ export default function TermsBody() {
         our discretion, may permit you to retake the Assessment without charge. Issues arising from your device, internet
         connection, browser, or other factors outside our control are not eligible for this remedy.
       </p>
-
       <h2>7. Pricing and payment</h2>
       <h3>7.1 Pricing</h3>
       <p>
@@ -217,13 +211,11 @@ export default function TermsBody() {
           Refund Policy.
         </li>
       </ul>
-
       <h2>8. Refunds</h2>
       <p>
         Refund eligibility and process are governed by our Refund Policy, available at edooka.in/refund-policy, which is
         incorporated by reference into these Terms.
       </p>
-
       <h2>9. Intellectual property</h2>
       <h3>9.1 Our intellectual property</h3>
       <p>
@@ -254,7 +246,6 @@ export default function TermsBody() {
           without our prior written consent
         </li>
       </ul>
-
       <h2>10. Certificate use, verification, and revocation</h2>
       <h3>10.1 Use of Certificates</h3>
       <p>
@@ -280,7 +271,6 @@ export default function TermsBody() {
         Revocation may involve removal of the Certificate record, invalidation of the Verification URL, and notification
         to relevant third parties. No refund will be provided for a revoked Certificate.
       </p>
-
       <h2>11. User conduct</h2>
       <p>You agree to use the Platform lawfully and respectfully. You agree NOT to:</p>
       <ul>
@@ -308,7 +298,6 @@ export default function TermsBody() {
           Act, 2000 and the rules thereunder
         </li>
       </ul>
-
       <h2>12. Disclaimers</h2>
       <p>
         The Platform and Services are provided on an &quot;as is&quot; and &quot;as available&quot; basis without
@@ -331,7 +320,6 @@ export default function TermsBody() {
         You acknowledge that you bear sole responsibility for evaluating the suitability of the Services and the
         Certificates for your purposes, and for any consequences of your use thereof.
       </p>
-
       <h2>13. Limitation of liability</h2>
       <p>To the maximum extent permitted by applicable law:</p>
       <ul>
@@ -350,7 +338,6 @@ export default function TermsBody() {
           applicable law, including but not limited to liability for gross negligence, fraud, or willful misconduct.
         </li>
       </ul>
-
       <h2>14. Indemnification</h2>
       <p>
         You agree to indemnify, defend, and hold harmless Beverse Innovations, its officers, directors, employees,
@@ -363,7 +350,6 @@ export default function TermsBody() {
         <li>Your violation of any applicable law or the rights of any third party</li>
         <li>Any misrepresentation by you regarding the nature, scope, or significance of any Certificate</li>
       </ul>
-
       <h2>15. Termination</h2>
       <h3>15.1 Termination by you</h3>
       <p>
@@ -383,7 +369,6 @@ export default function TermsBody() {
         nature should survive termination, including intellectual property rights, disclaimers, limitation of liability,
         indemnification, and dispute resolution provisions, will survive.
       </p>
-
       <h2>16. Changes to these Terms</h2>
       <p>
         We may modify these Terms from time to time. Material changes will be communicated to registered Users by email
@@ -391,7 +376,6 @@ export default function TermsBody() {
         date of revised Terms constitutes your acceptance of the revised Terms. If you do not agree with the revised
         Terms, you must stop using the Platform.
       </p>
-
       <h2>17. Governing law and jurisdiction</h2>
       <p>
         These Terms are governed by and construed in accordance with the laws of India, without regard to its conflict of
@@ -399,14 +383,12 @@ export default function TermsBody() {
         the Services shall be subject to the exclusive jurisdiction of the competent courts located in Bengaluru,
         Karnataka, India.
       </p>
-
       <h2>18. Dispute resolution</h2>
       <p>
         Before initiating any legal proceedings, the parties agree to attempt in good faith to resolve any dispute through
         informal negotiation, by contacting our Grievance Officer (see Section 19). If the dispute is not resolved within
         thirty (30) days of such contact, either party may pursue legal remedies subject to Section 17.
       </p>
-
       <h2>19. Grievance Officer</h2>
       <p>
         In accordance with the Information Technology Act, 2000 and the rules made thereunder, the name and contact details
@@ -423,7 +405,6 @@ export default function TermsBody() {
         efforts to resolve your grievance within fifteen (15) days, or such shorter timeline as may be required by
         applicable law.
       </p>
-
       <h2>20. Miscellaneous</h2>
       <h3>20.1 Entire agreement</h3>
       <p>
@@ -459,7 +440,6 @@ export default function TermsBody() {
         control, including but not limited to acts of God, natural disasters, war, civil unrest, government action,
         pandemic, internet or telecommunication failures, or denial-of-service attacks.
       </p>
-
       <h2>21. Contact us</h2>
       <p>If you have questions about these Terms, please contact us:</p>
       <p>Email: support@edooka.in</p>

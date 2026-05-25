@@ -1,19 +1,64 @@
 "use client";
 
+import {
+  assessmentStartUrl,
+  buildCertificateShareText,
+  certificatePngUrl,
+  linkedInShareUrl,
+  whatsAppShareUrl,
+} from "@/lib/share-certificate";
+import { getAppOrigin } from "@/lib/app-url";
+
 type Props = {
+  courseName: string;
+  programSlug: string;
   verifyUrl: string;
-  programTitle: string;
+  certificateNumber?: string;
   className?: string;
 };
 
-export function CertificateShareButtons({ verifyUrl, programTitle, className = "" }: Props) {
-  const linkedIn = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(verifyUrl)}`;
-  const wa = `https://wa.me/?text=${encodeURIComponent(
-    `I earned my edooka certificate for ${programTitle}! Verify: ${verifyUrl}`
-  )}`;
+export function CertificateShareButtons({
+  courseName,
+  programSlug,
+  verifyUrl,
+  certificateNumber,
+  className = "",
+}: Props) {
+  const assessmentLink = assessmentStartUrl(programSlug);
+  const shareText = buildCertificateShareText(courseName, assessmentLink);
+  const pageUrl = verifyUrl || getAppOrigin();
+  const pngUrl = certificateNumber ? certificatePngUrl(certificateNumber) : pageUrl;
+
+  const linkedIn = linkedInShareUrl(shareText, pageUrl);
+  const waText = certificateNumber
+    ? `${shareText}\n\nView my certificate: ${pngUrl}`
+    : shareText;
+  const wa = whatsAppShareUrl(waText);
+
+  async function shareNative() {
+    if (!navigator.share) return false;
+    const payload: ShareData = {
+      title: "My Edooka certificate",
+      text: shareText,
+      url: pageUrl,
+    };
+    try {
+      await navigator.share(payload);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   return (
-    <div className={`flex flex-wrap justify-center gap-3 ${className}`}>
+    <div className={`flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center ${className}`}>
+      <button
+        type="button"
+        onClick={() => void shareNative()}
+        className="rounded-xl border border-primary/40 bg-white px-5 py-2.5 text-sm font-semibold text-primary card-hover sm:px-6 sm:py-3"
+      >
+        Share…
+      </button>
       <a
         href={linkedIn}
         target="_blank"

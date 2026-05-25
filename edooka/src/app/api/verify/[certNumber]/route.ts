@@ -36,6 +36,7 @@ export async function GET(
         revoked: certificates.revoked,
         holderName: users.name,
         programTitle: programs.title,
+        programSlug: programs.slug,
         programCategory: programs.category,
       })
       .from(certificates)
@@ -71,6 +72,7 @@ export async function GET(
       certificateNumber: row.certificateNumber,
       holderName: row.holderName,
       programTitle: row.programTitle,
+      programSlug: row.programSlug,
       programCategory: row.programCategory,
       issuedAt: row.issuedAt?.toISOString() ?? null,
     });
