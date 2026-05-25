@@ -54,6 +54,8 @@ function SuccessInner() {
   const [issuedVerifyUrl, setIssuedVerifyUrl] = useState("");
   const [fulfillmentDone, setFulfillmentDone] = useState(false);
   const [issueError, setIssueError] = useState<string | null>(null);
+  const [paymentGate, setPaymentGate] = useState<"loading" | "paid" | "failed" | "unavailable">("loading");
+  const [paymentDetail, setPaymentDetail] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -114,6 +116,66 @@ function SuccessInner() {
     [certNumber, issuedVerifyUrl]
   );
 
+  const paymentVerified = paymentGate === "paid";
+
+  useEffect(() => {
+    let cancelled = false;
+    const flagKey = `edooka_fulfilled_${params.purchaseId}`;
+
+    setPaymentGate("loading");
+    setPaymentDetail("");
+
+    const verifyUrl = `/api/cashfree/order-status?orderId=${encodeURIComponent(params.purchaseId)}&demo=${demo ? "1" : "0"}`;
+
+    void (async () => {
+      let lastData: {
+        paid?: boolean;
+        orderStatus?: string;
+        message?: string;
+        source?: string;
+      } = {};
+
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        if (cancelled) return;
+        try {
+          const res = await fetch(verifyUrl);
+          lastData = (await res.json()) as typeof lastData;
+          if (lastData.paid) {
+            setPaymentGate("paid");
+            return;
+          }
+          const retryable =
+            lastData.orderStatus === "ACTIVE" ||
+            lastData.orderStatus === "PENDING" ||
+            lastData.source === "unavailable";
+          if (!retryable || attempt === 5) break;
+          await new Promise((resolve) => window.setTimeout(resolve, 1200));
+        } catch {
+          if (attempt === 5) {
+            sessionStorage.removeItem(flagKey);
+            setPaymentDetail("Could not verify payment status. Please try again.");
+            setPaymentGate("unavailable");
+            return;
+          }
+          await new Promise((resolve) => window.setTimeout(resolve, 1200));
+        }
+      }
+
+      if (cancelled) return;
+      sessionStorage.removeItem(flagKey);
+      const status = lastData.orderStatus?.trim();
+      setPaymentDetail(
+        lastData.message?.trim() ||
+          (status ? `Payment status: ${status}` : "Payment was cancelled or not completed.")
+      );
+      setPaymentGate(lastData.source === "unavailable" ? "unavailable" : "failed");
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [demo, params.purchaseId]);
+
   useEffect(() => {
     if (!certNumber) return;
     let cancelled = false;
@@ -132,7 +194,7 @@ function SuccessInner() {
   }, [certNumber]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !attempt || fulfillmentDone) return;
+    if (typeof window === "undefined" || !attempt || fulfillmentDone || !paymentVerified) return;
     const attemptId = attemptIdParam || attempt.attemptId;
     if (!attemptId || !attempt.slug) return;
 
@@ -248,6 +310,7 @@ function SuccessInner() {
     courseTitle,
     fulfillmentDone,
     params.purchaseId,
+    paymentVerified,
     programTitle,
   ]);
 
@@ -280,6 +343,51 @@ function SuccessInner() {
       },
     });
   }, [attempt, bundleKey, certNumber, params.purchaseId, recipientName, programTitle, verifyUrl]);
+
+  const checkoutRetryHref =
+    attemptIdParam && (attempt?.slug || slugParam)
+      ? `/checkout/${encodeURIComponent(attemptIdParam)}?bundle=${encodeURIComponent(bundleKey)}`
+      : attemptIdParam
+        ? `/checkout/${encodeURIComponent(attemptIdParam)}?bundle=${encodeURIComponent(bundleKey)}`
+        : "/#assessments";
+
+  if (paymentGate === "loading") {
+    return (
+      <section className="quiz-shell py-16 text-center text-text-muted">
+        Verifying payment status…
+      </section>
+    );
+  }
+
+  if (paymentGate === "failed" || paymentGate === "unavailable") {
+    return (
+      <section className="quiz-shell space-y-6 sm:space-y-8">
+        <div className="space-y-4 rounded-2xl border border-red-200 bg-red-50 p-6 text-center shadow-sm sm:p-8">
+          <p className="text-4xl">⚠️</p>
+          <h1 className="text-2xl font-extrabold text-red-800 sm:text-3xl">Payment not completed</h1>
+          <p className="text-sm text-red-700 sm:text-base">
+            {paymentGate === "unavailable"
+              ? "We could not confirm your payment right now."
+              : "Your payment was cancelled or failed."}{" "}
+            No certificate has been issued for this order.
+          </p>
+          {paymentDetail ? <p className="text-xs text-red-600 sm:text-sm">{paymentDetail}</p> : null}
+          <p className="font-mono text-xs text-red-500/90 sm:text-sm">Order ref · {params.purchaseId}</p>
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          <Link
+            href={checkoutRetryHref}
+            className="w-full max-w-sm rounded-xl bg-primary px-5 py-2.5 text-center font-semibold text-white shadow hover:bg-primary-hover sm:px-6 sm:py-3"
+          >
+            Try payment again
+          </Link>
+          <Link href="/" className="text-sm font-semibold text-primary">
+            ← Back to home
+          </Link>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="quiz-shell space-y-6 sm:space-y-8">

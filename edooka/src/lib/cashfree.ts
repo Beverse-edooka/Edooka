@@ -83,7 +83,7 @@ function cashfreeResponseIndicatesFailure(data: Record<string, unknown>): boolea
   );
 }
 
-function cashfreeApiBase(env: "sandbox" | "production"): string {
+export function cashfreeApiBase(env: "sandbox" | "production"): string {
   return env === "production" ? "https://api.cashfree.com/pg" : "https://sandbox.cashfree.com/pg";
 }
 

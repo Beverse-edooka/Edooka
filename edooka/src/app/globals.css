@@ -24,8 +24,29 @@ html {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+  font-size: 100%;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+/*
+ * High-density Retina / macOS displays often render smaller than Windows at 100% zoom.
+ * Slightly increase root scale on desktop Retina so layout matches standard desktop sizing.
+ */
+@media screen and (min-width: 1024px) and (min-resolution: 1.25dppx) {
+  html {
+    font-size: 106.25%;
+  }
+
+  .page-main {
+    max-width: 76rem;
+  }
+}
+
+@media screen and (min-width: 1280px) and (min-resolution: 1.5dppx) {
+  html {
+    font-size: 112.5%;
+  }
 }
 
 body {

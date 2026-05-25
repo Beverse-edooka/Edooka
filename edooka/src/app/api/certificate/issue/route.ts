@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { attempts, certificates, programs, purchases, users } from "@/lib/db/schema";
 import { getAppOrigin, verifyUrlForCertificate } from "@/lib/app-url";
 import { resolveCertificateIssueEmail } from "@/lib/certificate-issue-email";
+import { resolvePaymentPaidForOrder } from "@/lib/cashfree-order";
 import { getActiveProgramBySlug } from "@/server/queries/programs";
 import type { BundleType } from "@/types";
 
@@ -50,6 +51,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
+  const payment = await resolvePaymentPaidForOrder(orderId, false);
+  if (!payment.paid) {
+    return NextResponse.json(
+      {
+        error: "payment_not_completed",
+        orderStatus: payment.orderStatus,
+        message: payment.message ?? "Payment must be completed before issuing a certificate.",
+      },
+      { status: 402 }
+    );
+  }
+
   const email = resolveCertificateIssueEmail(body.email, attemptId);
 
   const bundleKey = (body.bundleKey ?? "single") as BundleType;
@@ -77,7 +90,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    let [existingAttempt] = await db
+      .select()
+      .from(attempts)
+      .where(eq(attempts.id, attemptId))
+      .limit(1);
+
     let [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    if (existingAttempt) {
+      const [attemptOwner] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, existingAttempt.userId))
+        .limit(1);
+      if (attemptOwner) user = attemptOwner;
+    }
     if (!user) {
       [user] = await db
         .insert(users)
@@ -91,23 +118,23 @@ export async function POST(req: NextRequest) {
       .where(eq(certificates.certificateNumber, certNumber))
       .limit(1);
     if (existingCert) {
+      const [certUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, existingCert.userId))
+        .limit(1);
+      const holderName = certUser?.name?.trim() || user.name;
       return NextResponse.json({
         ok: true,
         certificateNumber: certNumber,
         verifyUrl: existingCert.verificationUrl,
-        holderName: name,
+        holderName,
         programTitle: program.title,
         programSlug: slug,
       });
     }
 
     // Attempt must exist before purchase (FK: purchases.attempt_id → attempts.id).
-    const [existingAttempt] = await db
-      .select()
-      .from(attempts)
-      .where(eq(attempts.id, attemptId))
-      .limit(1);
-
     if (!existingAttempt) {
       await db.insert(attempts).values({
         id: attemptId,
@@ -158,7 +185,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       certificateNumber: certNumber,
       verifyUrl,
-      holderName: name,
+      holderName: user.name,
       programTitle: program.title,
       programSlug: slug,
     });
