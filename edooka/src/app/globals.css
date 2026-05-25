@@ -3,6 +3,8 @@
 :root {
   --background: #fafaf7;
   --foreground: #18181b;
+  /* Nav + main top padding — used to size homepage first-screen fold */
+  --home-fold-offset: 5.25rem;
 }
 
 @theme inline {
@@ -30,22 +32,12 @@ html {
 }
 
 /*
- * High-density Retina / macOS displays often render smaller than Windows at 100% zoom.
- * Slightly increase root scale on desktop Retina so layout matches standard desktop sizing.
+ * True 2x Retina desktops only (Safari/macOS). Avoid min-resolution: 1.25dppx — it also
+ * matches many Windows laptops at 125% display scaling and breaks above-the-fold layout.
  */
-@media screen and (min-width: 1024px) and (min-resolution: 1.25dppx) {
+@media screen and (min-width: 1280px) and (-webkit-min-device-pixel-ratio: 2) {
   html {
-    font-size: 106.25%;
-  }
-
-  .page-main {
-    max-width: 76rem;
-  }
-}
-
-@media screen and (min-width: 1280px) and (min-resolution: 1.5dppx) {
-  html {
-    font-size: 112.5%;
+    font-size: 104%;
   }
 }
 
@@ -65,6 +57,37 @@ video,
 svg {
   max-width: 100%;
   height: auto;
+}
+
+/* Homepage: hero fills viewport; four stat cards sit on the bottom edge of first screen */
+.home-hero-fold {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: calc(100svh - var(--home-fold-offset));
+  min-height: calc(100dvh - var(--home-fold-offset));
+  /* Lift stat cards slightly so full card + rounded bottom edge is visible on all devices */
+  padding-bottom: max(1.5rem, calc(0.75rem + env(safe-area-inset-bottom, 0px)));
+}
+
+.home-hero-fold__hero {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+  padding-inline: 0.25rem;
+}
+
+.home-hero-fold__stats {
+  flex: 0 0 auto;
+  width: 100%;
+  margin-bottom: 0.25rem;
 }
 
 /* Full-width page content aligned with site max-width */

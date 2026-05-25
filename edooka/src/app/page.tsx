@@ -62,81 +62,85 @@ export default function Home() {
   ];
 
   return (
-    <div className="w-full space-y-12 md:space-y-14">
-      {/* ── Hero (centered, compact so stats fit above fold) ── */}
-      <section className="flex flex-col items-center text-center space-y-4 max-w-3xl mx-auto pt-0 md:pt-2">
-        <p className="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          <span className="inline-block h-2 w-2 rounded-full bg-primary" />
-          Skill Validation for Healthcare Professionals
-        </p>
+    <div className="w-full">
+      {/* First screen: hero centered, four stat cards anchored to bottom (Windows + macOS) */}
+      <section className="home-hero-fold">
+        <div className="home-hero-fold__hero space-y-3 sm:space-y-4">
+          <p className="flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            <span className="inline-block h-2 w-2 rounded-full bg-primary" />
+            Skill Validation for Healthcare Professionals
+          </p>
 
-        <h1 className="text-4xl font-extrabold tracking-tight leading-tight sm:text-5xl md:text-6xl text-foreground">
-          Get certified in{" "}
-          <span
-            className="block text-primary transition-opacity duration-300"
-            style={{ opacity: visible ? 1 : 0 }}
-          >
-            {dynamicPhrases[phraseIndex]}
-          </span>
-        </h1>
+          <h1 className="text-3xl font-extrabold tracking-tight leading-[1.15] sm:text-4xl md:text-5xl text-foreground">
+            Get certified in{" "}
+            <span
+              className="block text-primary transition-opacity duration-300"
+              style={{ opacity: visible ? 1 : 0 }}
+            >
+              {dynamicPhrases[phraseIndex]}
+            </span>
+          </h1>
 
-        <p className="text-sm sm:text-base text-black leading-relaxed max-w-xl mx-auto">
-          Take a free 15-minute assessment in your specialty. Earn a verifiable certificate you can share on LinkedIn
-          and your resume.
-        </p>
+          <p className="text-sm sm:text-base text-black leading-snug max-w-xl mx-auto">
+            Take a free 15-minute assessment in your specialty. Earn a verifiable certificate you can share on LinkedIn
+            and your resume.
+          </p>
 
-        <div className="flex flex-wrap justify-center gap-3 pt-1">
-          <motion.div
-            whileHover={{
-              scale: 1.04,
-              backgroundColor: "#ff9a60",
-              color: "#000000",
-              boxShadow: "0 18px 40px rgba(255,154,96,0.24)",
-            }}
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className="rounded-lg bg-white px-5 py-2.5 sm:px-6 sm:py-3 font-semibold text-black shadow-sm cursor-pointer select-none"
-          >
-            <a href="#assessments" className="block">
-              Take free assessment
-            </a>
-          </motion.div>
+          <div className="flex flex-wrap justify-center gap-2.5 pt-0.5">
+            <motion.div
+              whileHover={{
+                scale: 1.04,
+                backgroundColor: "#ff9a60",
+                color: "#000000",
+                boxShadow: "0 18px 40px rgba(255,154,96,0.24)",
+              }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="rounded-lg bg-white px-4 py-2 sm:px-5 sm:py-2.5 font-semibold text-sm text-black shadow-sm cursor-pointer select-none"
+            >
+              <a href="#assessments" className="block">
+                Take free assessment
+              </a>
+            </motion.div>
 
-          <motion.div
-            whileHover={{
-              scale: 1.04,
-              backgroundColor: "#ff9a60",
-              color: "#000000",
-              boxShadow: "0 18px 40px rgba(255,154,96,0.24)",
-            }}
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className="rounded-lg bg-white px-5 py-2.5 sm:px-6 sm:py-3 font-semibold text-black shadow-sm cursor-pointer select-none"
-          >
-            <a href="#how-it-works" className="block">
-              How it works
-            </a>
-          </motion.div>
+            <motion.div
+              whileHover={{
+                scale: 1.04,
+                backgroundColor: "#ff9a60",
+                color: "#000000",
+                boxShadow: "0 18px 40px rgba(255,154,96,0.24)",
+              }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="rounded-lg bg-white px-4 py-2 sm:px-5 sm:py-2.5 font-semibold text-sm text-black shadow-sm cursor-pointer select-none"
+            >
+              <a href="#how-it-works" className="block">
+                How it works
+              </a>
+            </motion.div>
+          </div>
         </div>
+
+        <section className="home-hero-fold__stats grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+          {stats.map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1, duration: 0.4 }}
+              whileHover={{ y: -5, boxShadow: "0 16px 32px rgba(255,107,53,0.18)" }}
+              className="stat-card rounded-2xl border border-border-default bg-white p-4 sm:p-5 text-center shadow-sm"
+            >
+              <p className="text-2xl sm:text-3xl font-extrabold text-primary">{stat.value}</p>
+              <p className="mt-1 text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-black">
+                {stat.label}
+              </p>
+            </motion.div>
+          ))}
+        </section>
       </section>
 
-      {/* ── Stats Cards (pulled up, visible without scroll on typical laptop) ── */}
-      <section className="-mt-2 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
-        {stats.map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1, duration: 0.4 }}
-            whileHover={{ y: -5, boxShadow: "0 16px 32px rgba(255,107,53,0.18)" }}
-            className="stat-card rounded-2xl border border-border-default bg-white p-4 sm:p-5 text-center shadow-sm"
-          >
-            <p className="text-2xl sm:text-3xl font-extrabold text-primary">{stat.value}</p>
-            <p className="mt-1 text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-black">{stat.label}</p>
-          </motion.div>
-        ))}
-      </section>
-
+      <div className="w-full space-y-8 md:space-y-10 pt-6 md:pt-8">
       {/* ── Assessments ── */}
       <section className="space-y-6 w-full" id="assessments">
         <motion.div
@@ -182,6 +186,7 @@ export default function Home() {
           ))}
         </div>
       </section>
+      </div>
     </div>
   );
 }
