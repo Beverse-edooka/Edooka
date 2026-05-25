@@ -59,49 +59,98 @@ function SuccessInner() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    let loaded: ActiveAttempt | null = null;
-    const raw = sessionStorage.getItem(EDOOKA_ATTEMPT_KEY);
-    if (raw) {
-      try {
-        const data = normalizeLearnerAttempt(JSON.parse(raw) as ActiveAttempt);
-        if (!attemptIdParam || data.attemptId === attemptIdParam) loaded = data;
-      } catch {
-        /* ignore */
+    let cancelled = false;
+
+    const hydrateFromLocal = (): ActiveAttempt | null => {
+      let loaded: ActiveAttempt | null = null;
+      const raw = sessionStorage.getItem(EDOOKA_ATTEMPT_KEY);
+      if (raw) {
+        try {
+          const data = normalizeLearnerAttempt(JSON.parse(raw) as ActiveAttempt);
+          if (!attemptIdParam || data.attemptId === attemptIdParam) loaded = data;
+        } catch {
+          /* ignore */
+        }
       }
-    }
-    if (!loaded && attemptIdParam) {
-      const fromDisk = readLearnerProfile(attemptIdParam);
-      if (fromDisk) loaded = normalizeLearnerAttempt(fromDisk);
-    }
-    if (!loaded && attemptIdParam && slugParam) {
-      const catalog = getProgramBySlug(slugParam);
-      if (catalog) {
-        loaded = {
-          attemptId: attemptIdParam,
-          slug: slugParam,
-          programTitle: catalog.title,
-          programCategory: catalog.category,
-          name: "",
-          email: "",
-          phone: "",
-          startedAt: Date.now(),
-        };
+      if (!loaded && attemptIdParam) {
+        const fromDisk = readLearnerProfile(attemptIdParam);
+        if (fromDisk) loaded = normalizeLearnerAttempt(fromDisk);
       }
-    }
-    if (loaded) {
+      return loaded;
+    };
+
+    const applyLoaded = (loaded: ActiveAttempt) => {
+      if (cancelled) return;
       persistLearnerProfile(loaded);
       setAttempt(loaded);
       setProgramSlug(loaded.slug);
       if (loaded.name.trim()) setHolderName(loaded.name.trim());
       if (loaded.programTitle.trim()) setCourseTitle(loaded.programTitle.trim());
-    } else if (slugParam) {
-      const catalog = getProgramBySlug(slugParam);
-      if (catalog) {
-        setProgramSlug(slugParam);
-        setCourseTitle(catalog.title);
+    };
+
+    void (async () => {
+      const local = hydrateFromLocal();
+      const hasGoodName = !!local?.name.trim() && local.name.trim().toLowerCase() !== "learner";
+
+      if (local && hasGoodName) {
+        applyLoaded(local);
+        if (!cancelled) setProfileReady(true);
+        return;
       }
-    }
-    setProfileReady(true);
+
+      // Local data missing or incomplete (common on mobile after Cashfree redirect).
+      // Fetch the canonical profile from the server using attemptId.
+      if (attemptIdParam) {
+        try {
+          const res = await fetch(`/api/attempt-profile/${encodeURIComponent(attemptIdParam)}`);
+          if (res.ok) {
+            const data = (await res.json()) as {
+              ok?: boolean;
+              holderName?: string;
+              email?: string;
+              phone?: string;
+              programSlug?: string;
+              programTitle?: string;
+              programCategory?: string;
+            };
+            if (data.ok && data.holderName?.trim()) {
+              const merged: ActiveAttempt = {
+                attemptId: attemptIdParam,
+                slug: data.programSlug || local?.slug || slugParam || "",
+                programTitle: data.programTitle || local?.programTitle || "",
+                programCategory: data.programCategory || local?.programCategory || "",
+                name: data.holderName.trim(),
+                email: data.email || local?.email || "",
+                phone: data.phone || local?.phone || "",
+                startedAt: local?.startedAt ?? Date.now(),
+                referredBy: local?.referredBy,
+              };
+              applyLoaded(merged);
+              if (!cancelled) setProfileReady(true);
+              return;
+            }
+          }
+        } catch {
+          /* fall through to local fallback */
+        }
+      }
+
+      // Final fallback — at least populate the program from catalog.
+      if (local) {
+        applyLoaded(local);
+      } else if (slugParam) {
+        const catalog = getProgramBySlug(slugParam);
+        if (catalog && !cancelled) {
+          setProgramSlug(slugParam);
+          setCourseTitle(catalog.title);
+        }
+      }
+      if (!cancelled) setProfileReady(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [attemptIdParam, slugParam]);
 
   const recipientName = firstNonEmpty(holderName, attempt?.name) || (profileReady ? "Learner" : "…");

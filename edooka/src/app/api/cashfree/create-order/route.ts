@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createCashfreeOrder } from "@/lib/cashfree";
+import { upsertAttemptProfile } from "@/server/actions/attempt-profile";
 export const runtime = "nodejs";
 
 /**
@@ -26,6 +27,19 @@ export async function POST(req: NextRequest) {
     req.headers.get("host")?.trim() ||
     "";
   const requestBaseUrl = forwardedHost ? `${forwardedProto}://${forwardedHost}` : undefined;
+
+  // Persist learner profile + stub attempt server-side BEFORE Cashfree redirect.
+  // Survives mobile browser handoffs where localStorage/sessionStorage may be lost
+  // (e.g. iOS Safari, in-app browsers). Read back by attemptId after payment.
+  if (body.attemptId && body.programSlug) {
+    await upsertAttemptProfile({
+      attemptId: body.attemptId,
+      slug: body.programSlug,
+      name: body.customer?.name,
+      email: body.customer?.email,
+      phone: body.customer?.phone,
+    });
+  }
 
   const result = await createCashfreeOrder({
     bundleKey: body.bundleKey ?? "",
