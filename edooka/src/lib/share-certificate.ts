@@ -17,6 +17,18 @@ export function buildCertificateShareCaption(courseName: string, programSlug: st
   return `I just obtained ${courseName} skill certificate from Edooka. You can get yours here: ${assessmentLink}`;
 }
 
+/**
+ * LinkedIn composer caption — same message but without `https://` so LinkedIn is less
+ * likely to replace your text with a generic edooka.in link preview card.
+ */
+export function buildCertificateShareCaptionForLinkedIn(
+  courseName: string,
+  programSlug: string,
+): string {
+  const path = assessmentProgramUrl(programSlug).replace(/^https?:\/\//i, "");
+  return `I just obtained ${courseName} skill certificate from Edooka. You can get yours here: ${path}`;
+}
+
 export function certificateSharePageUrl(certificateNumber: string): string {
   const origin = getAppOrigin();
   return `${origin}/share/certificate/${encodeURIComponent(certificateNumber)}`;
