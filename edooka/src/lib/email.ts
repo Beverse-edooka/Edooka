@@ -23,7 +23,10 @@ export function isGmailConfigured(): boolean {
   return Boolean(user && pass);
 }
 
-/** SMTP transport. Tries SSL 465 first; STARTTLS 587 is used as fallback in sendMail. */
+/**
+ * SMTP transport. Tries SSL 465 first; STARTTLS 587 is the fallback in `sendMail`.
+ * Explicit timeouts prevent Railway/Vercel from returning 502 when Gmail is slow.
+ */
 function buildTransport(port: 465 | 587) {
   const user = cleanEnv(process.env.GMAIL_USER);
   const pass = cleanGmailPassword(process.env.GMAIL_APP_PASSWORD);
@@ -34,6 +37,10 @@ function buildTransport(port: 465 | 587) {
     secure: port === 465,
     auth: { user, pass },
     tls: { servername: "smtp.gmail.com" },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 20_000,
+    pool: false,
   });
 }
 

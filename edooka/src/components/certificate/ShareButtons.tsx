@@ -19,6 +19,12 @@ type Props = {
   className?: string;
 };
 
+/**
+ * LinkedIn's URL share endpoint cannot pre-fill the post composer with arbitrary text
+ * (the `summary` param is ignored). To still give the user a one-click feel we copy the
+ * caption to the clipboard at the same instant the popup is opened, so a single Ctrl+V
+ * (or long-press → paste on mobile) drops the same caption into the LinkedIn editor.
+ */
 export function CertificateShareButtons({
   courseName,
   programSlug,
@@ -28,20 +34,38 @@ export function CertificateShareButtons({
   className = "",
 }: Props) {
   const [status, setStatus] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const assessmentLink = assessmentStartUrl(programSlug);
   const sharePageUrl = certificateNumber ? certificateSharePageUrl(certificateNumber) : verifyUrl;
   const pngUrl = certificateNumber ? certificatePngUrl(certificateNumber) : sharePageUrl;
   const previewUrl = certificateNumber ? sharePageUrl : assessmentLink;
 
-  // SAME caption for LinkedIn and WhatsApp.
   const caption = buildCertificateShareMessage(courseName, assessmentLink, holderName);
-  // WhatsApp shows a link preview when a URL is part of the message body.
   const whatsAppText = `${caption}\n\n${previewUrl}`;
 
   const linkedIn = linkedInShareUrl(caption, previewUrl);
   const wa = whatsAppShareUrl(whatsAppText);
+
+  function writeClipboard(text: string) {
+    if (typeof navigator === "undefined" || !navigator.clipboard) return;
+    void navigator.clipboard.writeText(text).catch(() => {
+      /* user denied or unsupported — silent fail */
+    });
+  }
+
+  function openLinkedIn(e: React.MouseEvent<HTMLAnchorElement>) {
+    e.preventDefault();
+    writeClipboard(caption);
+    window.open(linkedIn, "_blank", "noopener,noreferrer");
+    setStatus("Caption copied — paste it (Ctrl+V) inside the LinkedIn post.");
+  }
+
+  function openWhatsApp(e: React.MouseEvent<HTMLAnchorElement>) {
+    e.preventDefault();
+    writeClipboard(whatsAppText);
+    window.open(wa, "_blank", "noopener,noreferrer");
+    setStatus(null);
+  }
 
   async function fetchCertificateFile(): Promise<File | null> {
     if (!certificateNumber) return null;
@@ -76,16 +100,6 @@ export function CertificateShareButtons({
     setStatus("Your browser doesn't support direct sharing. Use the LinkedIn or WhatsApp buttons.");
   }
 
-  async function copyCaption() {
-    try {
-      await navigator.clipboard.writeText(`${caption}\n${previewUrl}`);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setStatus("Could not copy. Select the text and copy manually.");
-    }
-  }
-
   return (
     <div className={`flex flex-col items-stretch gap-3 ${className}`}>
       <div className="flex flex-wrap items-center justify-center gap-3">
@@ -97,11 +111,11 @@ export function CertificateShareButtons({
           Share…
         </button>
 
-        {/* Plain anchor — runs synchronously on click so popup blockers don't intercept it. */}
         <a
           href={linkedIn}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={openLinkedIn}
           className="inline-flex items-center gap-2 rounded-xl bg-[#0a66c2] px-5 py-2.5 text-sm font-semibold text-white shadow card-hover sm:px-6 sm:py-3"
         >
           <span aria-hidden>in</span>
@@ -112,19 +126,12 @@ export function CertificateShareButtons({
           href={wa}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={openWhatsApp}
           className="inline-flex items-center gap-2 rounded-xl bg-[#25d366] px-5 py-2.5 text-sm font-semibold text-white shadow card-hover sm:px-6 sm:py-3"
         >
           <span aria-hidden>💬</span>
           Share on WhatsApp
         </a>
-
-        <button
-          type="button"
-          onClick={() => void copyCaption()}
-          className="rounded-xl border border-border-default bg-white px-5 py-2.5 text-sm font-semibold card-hover sm:px-6 sm:py-3"
-        >
-          {copied ? "Caption copied ✓" : "Copy caption"}
-        </button>
       </div>
 
       {status ? (
@@ -133,8 +140,6 @@ export function CertificateShareButtons({
 
       <p className="text-center text-[11px] leading-snug text-text-muted sm:text-xs">
         The preview card on LinkedIn and WhatsApp uses your certificate image automatically.
-        Tip: if you want the certificate as a full post image on LinkedIn, click&nbsp;
-        <strong>Download certificate</strong> and attach the PNG manually in LinkedIn.
       </p>
     </div>
   );

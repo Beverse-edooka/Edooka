@@ -11,7 +11,6 @@ import {
   minCorrectToPass,
   PASS_QUALIFY_COPY,
 } from "@/lib/assessment-constants";
-import { COMPANY_NAME } from "@/lib/site";
 import { CertificateShareButtons } from "@/components/certificate/ShareButtons";
 import { verifyUrlForCertificate } from "@/lib/app-url";
 import {
