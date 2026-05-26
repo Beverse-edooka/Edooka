@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         skipped: true,
-        message: `${result.error}. Set GMAIL_USER and GMAIL_APP_PASSWORD in .env.local.`,
+        message: result.error,
       },
       { status: 200 }
     );

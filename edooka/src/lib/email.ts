@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { cleanEnv, gmailConfigHint } from "@/lib/env-clean";
 
 export type SendMailOptions = {
   to: string;
@@ -12,9 +13,15 @@ export type SendMailOptions = {
 };
 
 /** Gmail SMTP via app password — no Resend subscription required. */
+export function isGmailConfigured(): boolean {
+  const user = cleanEnv(process.env.GMAIL_USER);
+  const pass = cleanEnv(process.env.GMAIL_APP_PASSWORD);
+  return Boolean(user && pass);
+}
+
 export function getMailTransport() {
-  const user = process.env.GMAIL_USER?.trim();
-  const pass = process.env.GMAIL_APP_PASSWORD?.trim();
+  const user = cleanEnv(process.env.GMAIL_USER);
+  const pass = cleanEnv(process.env.GMAIL_APP_PASSWORD);
   if (!user || !pass) return null;
   return nodemailer.createTransport({
     host: "smtp.gmail.com",
@@ -27,12 +34,12 @@ export function getMailTransport() {
 export async function sendMail(opts: SendMailOptions): Promise<{ ok: true } | { error: string }> {
   const transport = getMailTransport();
   if (!transport) {
-    return { error: "GMAIL_USER and GMAIL_APP_PASSWORD are not configured" };
+    return { error: gmailConfigHint() };
   }
 
   const from =
-    process.env.GMAIL_FROM?.trim() ||
-    process.env.GMAIL_USER?.trim() ||
+    cleanEnv(process.env.GMAIL_FROM) ||
+    cleanEnv(process.env.GMAIL_USER) ||
     "certificates@edooka.in";
 
   try {

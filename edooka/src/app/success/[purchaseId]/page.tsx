@@ -494,6 +494,7 @@ function SuccessInner() {
             programSlug={shareSlug}
             verifyUrl={verifyUrl}
             certificateNumber={certNumber || undefined}
+            holderName={recipientName}
           />
         ) : null}
       </div>
@@ -502,7 +503,8 @@ function SuccessInner() {
         Email:{" "}
         {emailStatus === "sending" && "Sending…"}
         {emailStatus === "sent" && "✓ Sent to your inbox"}
-        {emailStatus === "skipped" && "Set GMAIL_USER and GMAIL_APP_PASSWORD in .env.local."}
+        {emailStatus === "skipped" &&
+          "Certificate email was not sent — add GMAIL_USER and GMAIL_APP_PASSWORD in Railway or Vercel environment variables (Gmail App Password)."}
         {emailStatus === "error" && "Could not send — download your certificate above."}
         {emailStatus === "idle" && attempt?.email ? "Preparing…" : !attempt?.email ? "Add email on start screen next time." : null}
       </p>
