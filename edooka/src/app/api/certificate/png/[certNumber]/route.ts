@@ -5,11 +5,12 @@ import { renderCertificatePng } from "@/lib/certificate-template";
 export const runtime = "nodejs";
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ certNumber: string }> }
 ) {
   const { certNumber } = await params;
   const normalized = decodeURIComponent(certNumber).trim();
+  const download = req.nextUrl.searchParams.get("download") === "1";
 
   const input = await getCertificateRenderInputFromDb(normalized);
   if (!input) {
@@ -25,12 +26,15 @@ export async function GET(
 
   try {
     const buffer = await renderCertificatePng(input);
+    const disposition = download
+      ? `attachment; filename="${input.certificateNumber}.png"`
+      : `inline; filename="${input.certificateNumber}.png"`;
 
     return new NextResponse(buffer as unknown as BodyInit, {
       headers: {
         "Content-Type": "image/png",
-        "Content-Disposition": `attachment; filename="${input.certificateNumber}.png"`,
-        "Cache-Control": "public, max-age=86400",
+        "Content-Disposition": disposition,
+        "Cache-Control": "public, max-age=86400, immutable",
       },
     });
   } catch (e) {

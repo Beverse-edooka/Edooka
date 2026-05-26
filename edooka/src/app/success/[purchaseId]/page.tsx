@@ -48,6 +48,7 @@ function SuccessInner() {
   const [courseTitle, setCourseTitle] = useState("");
   const [programSlug, setProgramSlug] = useState("");
   const [emailStatus, setEmailStatus] = useState<"idle" | "sending" | "sent" | "skipped" | "error">("idle");
+  const [emailDetail, setEmailDetail] = useState<string | null>(null);
   const [issuedDateLabel, setIssuedDateLabel] = useState("");
   const [remainingCredits, setRemainingCredits] = useState(0);
   const [certNumber, setCertNumber] = useState("");
@@ -341,14 +342,20 @@ function SuccessInner() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, certificateNumber: number }),
         });
-        const data = (await emailRes.json()) as { skipped?: boolean };
-        if (data.skipped) setEmailStatus("skipped");
-        else if (emailRes.ok) {
+        const data = (await emailRes.json()) as { skipped?: boolean; error?: string; message?: string };
+        if (data.skipped) {
+          setEmailStatus("skipped");
+          setEmailDetail(data.error || data.message || null);
+        } else if (emailRes.ok) {
           setEmailStatus("sent");
           sessionStorage.setItem(emailKey, "1");
-        } else setEmailStatus("error");
-      } catch {
+        } else {
+          setEmailStatus("error");
+          setEmailDetail(data.error || data.message || null);
+        }
+      } catch (e) {
         setEmailStatus("error");
+        setEmailDetail(e instanceof Error ? e.message : null);
       }
     })();
   }, [
@@ -499,15 +506,23 @@ function SuccessInner() {
         ) : null}
       </div>
 
-      <p className="text-center text-sm text-text-muted">
-        Email:{" "}
-        {emailStatus === "sending" && "Sending…"}
-        {emailStatus === "sent" && "✓ Sent to your inbox"}
-        {emailStatus === "skipped" &&
-          "Certificate email was not sent — add GMAIL_USER and GMAIL_APP_PASSWORD in Railway or Vercel environment variables (Gmail App Password)."}
-        {emailStatus === "error" && "Could not send — download your certificate above."}
-        {emailStatus === "idle" && attempt?.email ? "Preparing…" : !attempt?.email ? "Add email on start screen next time." : null}
-      </p>
+      <div className="space-y-1 text-center text-sm text-text-muted">
+        <p>
+          Email:{" "}
+          {emailStatus === "sending" && "Sending…"}
+          {emailStatus === "sent" && "✓ Sent to your inbox"}
+          {emailStatus === "skipped" && "Certificate email was not sent."}
+          {emailStatus === "error" && "Could not send — download your certificate above."}
+          {emailStatus === "idle" && attempt?.email
+            ? "Preparing…"
+            : !attempt?.email
+              ? "Add email on start screen next time."
+              : null}
+        </p>
+        {emailDetail && (emailStatus === "skipped" || emailStatus === "error") ? (
+          <p className="break-words text-xs text-red-600/90">{emailDetail}</p>
+        ) : null}
+      </div>
 
       {issueError ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-700">

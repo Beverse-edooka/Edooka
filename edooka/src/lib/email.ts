@@ -12,28 +12,51 @@ export type SendMailOptions = {
   }>;
 };
 
-/** Gmail SMTP via app password — no Resend subscription required. */
+/** Gmail App Passwords are 16 chars; users often paste them with spaces. Strip all whitespace. */
+function cleanGmailPassword(value?: string): string {
+  return cleanEnv(value).replace(/\s+/g, "");
+}
+
 export function isGmailConfigured(): boolean {
   const user = cleanEnv(process.env.GMAIL_USER);
-  const pass = cleanEnv(process.env.GMAIL_APP_PASSWORD);
+  const pass = cleanGmailPassword(process.env.GMAIL_APP_PASSWORD);
   return Boolean(user && pass);
 }
 
-export function getMailTransport() {
+/** SMTP transport. Tries SSL 465 first; STARTTLS 587 is used as fallback in sendMail. */
+function buildTransport(port: 465 | 587) {
   const user = cleanEnv(process.env.GMAIL_USER);
-  const pass = cleanEnv(process.env.GMAIL_APP_PASSWORD);
+  const pass = cleanGmailPassword(process.env.GMAIL_APP_PASSWORD);
   if (!user || !pass) return null;
   return nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+    port,
+    secure: port === 465,
     auth: { user, pass },
+    tls: { servername: "smtp.gmail.com" },
   });
 }
 
+export function getMailTransport() {
+  return buildTransport(465);
+}
+
+function explainSmtpError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes("invalid login") || m.includes("username and password not accepted")) {
+    return `${message} — Gmail rejected the credentials. Re-create an App Password at https://myaccount.google.com/apppasswords (2-Step Verification must be ON), and make sure GMAIL_USER matches the account that generated the password.`;
+  }
+  if (m.includes("eauth") || m.includes("application-specific")) {
+    return `${message} — Google requires an App Password (not your normal Gmail password). Generate one and update GMAIL_APP_PASSWORD.`;
+  }
+  if (m.includes("self-signed") || m.includes("certificate") || m.includes("etimedout") || m.includes("econnrefused")) {
+    return `${message} — SMTP connection problem. Check Railway egress isn't blocked, and that GMAIL_USER/GMAIL_APP_PASSWORD have no extra characters.`;
+  }
+  return message;
+}
+
 export async function sendMail(opts: SendMailOptions): Promise<{ ok: true } | { error: string }> {
-  const transport = getMailTransport();
-  if (!transport) {
+  if (!isGmailConfigured()) {
     return { error: gmailConfigHint() };
   }
 
@@ -42,22 +65,34 @@ export async function sendMail(opts: SendMailOptions): Promise<{ ok: true } | { 
     cleanEnv(process.env.GMAIL_USER) ||
     "certificates@edooka.in";
 
-  try {
-    await transport.sendMail({
-      from: `Edooka <${from}>`,
-      to: opts.to,
-      subject: opts.subject,
-      html: opts.html,
-      attachments: opts.attachments?.map((a) => ({
-        filename: a.filename,
-        content: a.content,
-        contentType: a.contentType ?? "application/pdf",
-      })),
-    });
-    return { ok: true };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Failed to send email" };
+  const payload = {
+    from: `Edooka <${from}>`,
+    to: opts.to,
+    subject: opts.subject,
+    html: opts.html,
+    attachments: opts.attachments?.map((a) => ({
+      filename: a.filename,
+      content: a.content,
+      contentType: a.contentType ?? "application/octet-stream",
+    })),
+  };
+
+  const ports: Array<465 | 587> = [465, 587];
+  let lastError = "Could not send email";
+  for (const port of ports) {
+    const transport = buildTransport(port);
+    if (!transport) continue;
+    try {
+      await transport.sendMail(payload);
+      return { ok: true };
+    } catch (e) {
+      const raw = e instanceof Error ? e.message : String(e);
+      lastError = explainSmtpError(raw);
+      console.error(`[email] Gmail SMTP failed on port ${port}:`, raw);
+    }
   }
+
+  return { error: lastError };
 }
 
 export function buildCertificateEmailHtml(params: {

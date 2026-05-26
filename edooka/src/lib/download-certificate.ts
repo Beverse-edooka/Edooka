@@ -42,7 +42,7 @@ export async function downloadCertificatePng(input: DownloadCertificateInput): P
   }
 
   const cert = encodeURIComponent(input.certificateNumber.trim());
-  let res = await fetch(`/api/certificate/png/${cert}`);
+  let res = await fetch(`/api/certificate/png/${cert}?download=1`);
 
   const fallback: CertificateRenderInput | undefined = input.fallback
     ? {

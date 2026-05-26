@@ -28,18 +28,20 @@ export function CertificateShareButtons({
   className = "",
 }: Props) {
   const [status, setStatus] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
   const assessmentLink = assessmentStartUrl(programSlug);
-  const shareMessage = buildCertificateShareMessage(courseName, assessmentLink, holderName);
   const sharePageUrl = certificateNumber ? certificateSharePageUrl(certificateNumber) : verifyUrl;
   const pngUrl = certificateNumber ? certificatePngUrl(certificateNumber) : sharePageUrl;
-  const firstShareUrl = certificateNumber ? sharePageUrl : assessmentLink;
+  const previewUrl = certificateNumber ? sharePageUrl : assessmentLink;
 
-  const linkedIn = linkedInShareUrl(shareMessage, firstShareUrl);
-  const wa = whatsAppShareUrl(
-    certificateNumber
-      ? `${shareMessage}\n\nView my certificate: ${sharePageUrl}\n\nCertificate image: ${pngUrl}`
-      : shareMessage
-  );
+  // SAME caption for LinkedIn and WhatsApp.
+  const caption = buildCertificateShareMessage(courseName, assessmentLink, holderName);
+  // WhatsApp shows a link preview when a URL is part of the message body.
+  const whatsAppText = `${caption}\n\n${previewUrl}`;
+
+  const linkedIn = linkedInShareUrl(caption, previewUrl);
+  const wa = whatsAppShareUrl(whatsAppText);
 
   async function fetchCertificateFile(): Promise<File | null> {
     if (!certificateNumber) return null;
@@ -58,72 +60,81 @@ export function CertificateShareButtons({
   async function shareNative() {
     setStatus(null);
     const file = await fetchCertificateFile();
-    if (navigator.share) {
+    if (typeof navigator !== "undefined" && navigator.share) {
       try {
         const payload: ShareData = file
-          ? { title: "My Edooka certificate", text: `${shareMessage}\n${firstShareUrl}`, files: [file] }
-          : { title: "My Edooka certificate", text: shareMessage, url: firstShareUrl };
+          ? { title: "My Edooka certificate", text: `${caption}\n${previewUrl}`, files: [file] }
+          : { title: "My Edooka certificate", text: caption, url: previewUrl };
         if (!file || !navigator.canShare || navigator.canShare({ files: [file] })) {
           await navigator.share(payload);
-          return true;
+          return;
         }
       } catch {
-        /* fall through */
+        /* user cancelled or browser refused */
       }
     }
-    return false;
+    setStatus("Your browser doesn't support direct sharing. Use the LinkedIn or WhatsApp buttons.");
   }
 
-  async function shareLinkedIn() {
-    setStatus(null);
-    const file = await fetchCertificateFile();
-    if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({
-          title: "My Edooka certificate",
-          text: shareMessage,
-          files: [file],
-        });
-        setStatus("Opened share sheet — pick LinkedIn and add your caption.");
-        return;
-      } catch {
-        /* fallback below */
-      }
+  async function copyCaption() {
+    try {
+      await navigator.clipboard.writeText(`${caption}\n${previewUrl}`);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setStatus("Could not copy. Select the text and copy manually.");
     }
-    window.open(linkedIn, "_blank", "noopener,noreferrer");
-    setStatus(
-      "LinkedIn opened with your greeting. The link preview shows your certificate image — attach the downloaded PNG from “Download certificate” if you want it in the post."
-    );
   }
 
   return (
-    <div className={`flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center ${className}`}>
-      <button
-        type="button"
-        onClick={() => void shareNative()}
-        className="rounded-xl border border-primary/40 bg-white px-5 py-2.5 text-sm font-semibold text-primary card-hover sm:px-6 sm:py-3"
-      >
-        Share…
-      </button>
-      <button
-        type="button"
-        onClick={() => void shareLinkedIn()}
-        className="rounded-xl border border-border-default px-5 py-2.5 text-sm font-semibold card-hover sm:px-6 sm:py-3"
-      >
-        Share on LinkedIn
-      </button>
-      <a
-        href={wa}
-        target="_blank"
-        rel="noreferrer"
-        className="rounded-xl border border-border-default px-5 py-2.5 text-sm font-semibold card-hover sm:px-6 sm:py-3"
-      >
-        Share on WhatsApp
-      </a>
-      {status ? <p className="w-full text-center text-xs text-text-muted sm:text-sm">{status}</p> : null}
-      <p className="w-full text-center text-[11px] text-text-muted leading-snug sm:text-xs">
-        WhatsApp/LinkedIn preview cards use the first URL in the message. We now share a dedicated certificate page
-        URL first so preview thumbnails render correctly.
+    <div className={`flex flex-col items-stretch gap-3 ${className}`}>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <button
+          type="button"
+          onClick={() => void shareNative()}
+          className="rounded-xl border border-primary/40 bg-white px-5 py-2.5 text-sm font-semibold text-primary card-hover sm:px-6 sm:py-3"
+        >
+          Share…
+        </button>
+
+        {/* Plain anchor — runs synchronously on click so popup blockers don't intercept it. */}
+        <a
+          href={linkedIn}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-xl bg-[#0a66c2] px-5 py-2.5 text-sm font-semibold text-white shadow card-hover sm:px-6 sm:py-3"
+        >
+          <span aria-hidden>in</span>
+          Share on LinkedIn
+        </a>
+
+        <a
+          href={wa}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-xl bg-[#25d366] px-5 py-2.5 text-sm font-semibold text-white shadow card-hover sm:px-6 sm:py-3"
+        >
+          <span aria-hidden>💬</span>
+          Share on WhatsApp
+        </a>
+
+        <button
+          type="button"
+          onClick={() => void copyCaption()}
+          className="rounded-xl border border-border-default bg-white px-5 py-2.5 text-sm font-semibold card-hover sm:px-6 sm:py-3"
+        >
+          {copied ? "Caption copied ✓" : "Copy caption"}
+        </button>
+      </div>
+
+      {status ? (
+        <p className="text-center text-xs text-text-muted sm:text-sm">{status}</p>
+      ) : null}
+
+      <p className="text-center text-[11px] leading-snug text-text-muted sm:text-xs">
+        The preview card on LinkedIn and WhatsApp uses your certificate image automatically.
+        Tip: if you want the certificate as a full post image on LinkedIn, click&nbsp;
+        <strong>Download certificate</strong> and attach the PNG manually in LinkedIn.
       </p>
     </div>
   );

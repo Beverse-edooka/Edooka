@@ -77,9 +77,11 @@ export async function POST(req: NextRequest) {
   });
 
   if ("error" in result) {
+    console.error("[certificate/email] send failed:", result.error);
     return NextResponse.json(
       {
         skipped: true,
+        error: result.error,
         message: result.error,
       },
       { status: 200 }
