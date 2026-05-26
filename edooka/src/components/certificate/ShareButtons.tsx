@@ -3,8 +3,9 @@
 import { useState } from "react";
 import {
   buildCertificateShareCaption,
+  certificatePngUrl,
   certificateSharePageUrl,
-  linkedInShareOffsiteUrl,
+  linkedInComposerUrl,
   whatsAppShareUrl,
 } from "@/lib/share-certificate";
 
@@ -15,10 +16,18 @@ type Props = {
   className?: string;
 };
 
+async function copyCertificateImageToClipboard(certificateNumber: string): Promise<void> {
+  const res = await fetch(certificatePngUrl(certificateNumber));
+  if (!res.ok) return;
+  const blob = await res.blob();
+  if (typeof navigator === "undefined" || !navigator.clipboard?.write) return;
+  const type = blob.type || "image/png";
+  await navigator.clipboard.write([new ClipboardItem({ [type]: blob })]);
+}
+
 /**
- * Opens LinkedIn in the browser (never the OS “Share” sheet).
- * Uses share-offsite with the certificate page so LinkedIn shows the certificate
- * image and caption from Open Graph metadata.
+ * LinkedIn: pre-fill caption via `text=` (not share-offsite `url=`), copy certificate PNG
+ * to clipboard so the user can paste (Ctrl+V) it into the post as a photo.
  */
 export function CertificateShareButtons({
   courseName,
@@ -30,15 +39,23 @@ export function CertificateShareButtons({
 
   const caption = buildCertificateShareCaption(courseName, programSlug);
   const sharePageUrl = certificateSharePageUrl(certificateNumber);
-  const linkedInHref = linkedInShareOffsiteUrl(sharePageUrl);
   const waHref = whatsAppShareUrl(caption, sharePageUrl);
 
-  function onLinkedInClick(e: React.MouseEvent<HTMLButtonElement>) {
+  async function onLinkedInClick(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
     if (linkedInBusy) return;
     setLinkedInBusy(true);
-    window.open(linkedInHref, "_blank", "noopener,noreferrer");
-    window.setTimeout(() => setLinkedInBusy(false), 600);
+
+    try {
+      try {
+        await copyCertificateImageToClipboard(certificateNumber);
+      } catch {
+        /* clipboard denied or unsupported — still open LinkedIn with caption */
+      }
+      window.open(linkedInComposerUrl(caption), "_blank", "noopener,noreferrer");
+    } finally {
+      window.setTimeout(() => setLinkedInBusy(false), 800);
+    }
   }
 
   return (
@@ -46,8 +63,9 @@ export function CertificateShareButtons({
       <button
         type="button"
         disabled={linkedInBusy}
-        onClick={onLinkedInClick}
+        onClick={(e) => void onLinkedInClick(e)}
         className="cert-action-btn cert-action-btn-linkedin disabled:opacity-70"
+        title="Caption is filled automatically; certificate image is copied — paste it in the post with Ctrl+V"
       >
         <span aria-hidden className="font-bold">
           in
