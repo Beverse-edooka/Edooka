@@ -1,15 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { CertificateShareButtons } from "@/components/certificate/ShareButtons";
 import { COMPANY_NAME } from "@/lib/site";
+import { verifyUrlForCertificate } from "@/lib/app-url";
+import { downloadCertificatePng } from "@/lib/download-certificate";
 
 type VerifyResult = {
   valid: boolean;
   certificateNumber?: string;
   holderName?: string;
   programTitle?: string;
+  programSlug?: string;
   programCategory?: string;
   issuedAt?: string | null;
   message?: string;
@@ -24,6 +28,7 @@ export default function VerifyPage() {
   const certNumber = decodeURIComponent(params.certNumber ?? "");
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState<VerifyResult | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (!certNumber) {
@@ -52,6 +57,24 @@ export default function VerifyPage() {
     };
   }, [certNumber]);
 
+  const downloadPdf = useCallback(async () => {
+    if (!result?.valid || !result.certificateNumber) return;
+    setDownloading(true);
+    try {
+      await downloadCertificatePng({
+        certificateNumber: result.certificateNumber,
+        fallback: {
+          fullName: result.holderName ?? "Learner",
+          courseName: result.programTitle ?? "Assessment",
+          certificateNumber: result.certificateNumber,
+          verifyUrl: verifyUrlForCertificate(result.certificateNumber),
+        },
+      });
+    } finally {
+      setDownloading(false);
+    }
+  }, [result]);
+
   const issuedLabel =
     result?.issuedAt && !Number.isNaN(Date.parse(result.issuedAt))
       ? new Date(result.issuedAt).toLocaleDateString("en-IN", {
@@ -60,6 +83,12 @@ export default function VerifyPage() {
           year: "numeric",
         })
       : null;
+
+  const canShare =
+    result?.valid &&
+    result.certificateNumber &&
+    result.programSlug &&
+    result.programTitle;
 
   return (
     <section className="quiz-shell space-y-6">
@@ -71,24 +100,44 @@ export default function VerifyPage() {
       {loading ? (
         <p className="text-center text-text-muted">Checking certificate…</p>
       ) : result?.valid ? (
-        <article className="rounded-2xl border-2 border-green-500/40 bg-green-50 p-5 space-y-3 text-center sm:p-6">
-          <p className="text-4xl">✓</p>
-          <h2 className="text-xl font-bold text-green-800">Valid {COMPANY_NAME} certificate</h2>
-          <div className="text-sm text-text-secondary space-y-1">
-            <p>
-              <strong>Holder:</strong> {result.holderName}
-            </p>
-            <p>
-              <strong>Program:</strong> {result.programTitle}
-              {result.programCategory ? ` (${result.programCategory})` : ""}
-            </p>
-            {issuedLabel ? (
+        <>
+          <article className="rounded-2xl border-2 border-green-500/40 bg-green-50 p-5 space-y-3 text-center sm:p-6">
+            <p className="text-4xl">✓</p>
+            <h2 className="text-xl font-bold text-green-800">Valid {COMPANY_NAME} certificate</h2>
+            <div className="text-sm text-text-secondary space-y-1">
               <p>
-                <strong>Issued:</strong> {issuedLabel}
+                <strong>Holder:</strong> {result.holderName}
               </p>
-            ) : null}
-          </div>
-        </article>
+              <p>
+                <strong>Program:</strong> {result.programTitle}
+                {result.programCategory ? ` (${result.programCategory})` : ""}
+              </p>
+              {issuedLabel ? (
+                <p>
+                  <strong>Issued:</strong> {issuedLabel}
+                </p>
+              ) : null}
+            </div>
+          </article>
+
+          {canShare ? (
+            <div className="flex flex-col items-center gap-4">
+              <button
+                type="button"
+                disabled={downloading}
+                onClick={() => void downloadPdf()}
+                className="w-full max-w-sm rounded-xl bg-primary px-5 py-2.5 font-semibold text-white shadow hover:bg-primary-hover disabled:opacity-50 sm:px-6 sm:py-3"
+              >
+                {downloading ? "Preparing PDF…" : "Download PDF"}
+              </button>
+              <CertificateShareButtons
+                courseName={result.programTitle!}
+                programSlug={result.programSlug!}
+                certificateNumber={result.certificateNumber!}
+              />
+            </div>
+          ) : null}
+        </>
       ) : (
         <article className="rounded-2xl border border-red-200 bg-red-50 p-5 space-y-3 text-center sm:p-6">
           <p className="text-4xl">✕</p>

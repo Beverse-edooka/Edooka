@@ -1,22 +1,20 @@
 import { getAppOrigin } from "@/lib/app-url";
 
+/** Public assessments listing for a program — used in share captions. */
+export function assessmentProgramUrl(slug: string): string {
+  const origin = getAppOrigin();
+  return `${origin}/assessments/${encodeURIComponent(slug)}`;
+}
+
+/** @deprecated Use assessmentProgramUrl — kept for any legacy /start links */
 export function assessmentStartUrl(slug: string): string {
   const origin = getAppOrigin();
   return `${origin}/start/${encodeURIComponent(slug)}`;
 }
 
-export function buildCertificateShareText(courseName: string, assessmentLink: string): string {
-  return `I just obtained "${courseName}" skill assessment certificate from Edooka. You can get yours here: ${assessmentLink}`;
-}
-
-/** Single canonical caption used for LinkedIn and WhatsApp (and Web Share). */
-export function buildCertificateShareMessage(
-  courseName: string,
-  assessmentLink: string,
-  holderName?: string
-): string {
-  const greeting = holderName?.trim() ? `Hi! I'm ${holderName.trim()}. ` : "Hi! ";
-  return `${greeting}${buildCertificateShareText(courseName, assessmentLink)}`;
+export function buildCertificateShareCaption(courseName: string, programSlug: string): string {
+  const assessmentLink = assessmentProgramUrl(programSlug);
+  return `I just obtained ${courseName} skill certificate from Edooka. You can get yours here: ${assessmentLink}`;
 }
 
 export function certificateSharePageUrl(certificateNumber: string): string {
@@ -24,21 +22,15 @@ export function certificateSharePageUrl(certificateNumber: string): string {
   return `${origin}/share/certificate/${encodeURIComponent(certificateNumber)}`;
 }
 
-/**
- * LinkedIn `share-offsite` only reads the destination URL — it scrapes Open Graph
- * meta tags from that page for the preview card image, title and description.
- * The `summary=` parameter is largely ignored by LinkedIn today, but we still pass it
- * so the user gets prefilled text wherever the API supports it.
- */
-export function linkedInShareUrl(shareText: string, pageUrl: string): string {
-  const encodedUrl = encodeURIComponent(pageUrl);
-  const encodedSummary = encodeURIComponent(shareText);
-  return `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}&summary=${encodedSummary}`;
+/** Opens LinkedIn feed composer with pre-filled caption text (image pasted separately). */
+export function linkedInShareUrl(caption: string): string {
+  return `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(caption)}`;
 }
 
-/** WhatsApp shows a link preview for the first URL in the text body. */
-export function whatsAppShareUrl(shareText: string): string {
-  return `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+/** WhatsApp message: caption + share page URL for certificate Open Graph preview. */
+export function whatsAppShareUrl(caption: string, previewPageUrl: string): string {
+  const body = previewPageUrl ? `${caption}\n\n${previewPageUrl}` : caption;
+  return `https://wa.me/?text=${encodeURIComponent(body)}`;
 }
 
 export function certificatePngUrl(certificateNumber: string): string {

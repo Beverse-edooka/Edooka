@@ -1,7 +1,5 @@
-import { eq, or } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { certificates, programs, users } from "@/lib/db/schema";
+import { getCertificateByNumber } from "@/server/queries/certificates";
 
 /**
  * GET /api/verify/[token] — public certificate lookup.
@@ -23,34 +21,10 @@ export async function GET(
     );
   }
 
-  // Cert numbers are stored upper-case; qrTokens are lower-case hex.
-  // Try both shapes from the same input.
   const upper = raw.toUpperCase();
-  const lower = raw.toLowerCase();
 
   try {
-    const rows = await db
-      .select({
-        certificateNumber: certificates.certificateNumber,
-        issuedAt: certificates.issuedAt,
-        revoked: certificates.revoked,
-        holderName: users.name,
-        programTitle: programs.title,
-        programSlug: programs.slug,
-        programCategory: programs.category,
-      })
-      .from(certificates)
-      .innerJoin(users, eq(certificates.userId, users.id))
-      .innerJoin(programs, eq(certificates.programId, programs.id))
-      .where(
-        or(
-          eq(certificates.certificateNumber, upper),
-          eq(certificates.qrToken, lower),
-        ),
-      )
-      .limit(1);
-
-    const row = rows[0];
+    const row = await getCertificateByNumber(raw);
     if (!row) {
       return NextResponse.json({
         valid: false,

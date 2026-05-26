@@ -493,15 +493,13 @@ function SuccessInner() {
           className="w-full max-w-sm rounded-xl bg-primary px-5 py-2.5 font-semibold text-white shadow disabled:opacity-50 sm:px-6 sm:py-3"
           title={issueError ? "Register certificate first (refresh after fixing the error above)" : undefined}
         >
-          Download certificate
+          Download PDF
         </motion.button>
-        {verifyUrl && shareSlug ? (
+        {certNumber && shareSlug ? (
           <CertificateShareButtons
             courseName={programTitle}
             programSlug={shareSlug}
-            verifyUrl={verifyUrl}
-            certificateNumber={certNumber || undefined}
-            holderName={recipientName}
+            certificateNumber={certNumber}
           />
         ) : null}
       </div>

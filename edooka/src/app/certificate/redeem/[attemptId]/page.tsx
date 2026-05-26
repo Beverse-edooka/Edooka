@@ -222,12 +222,13 @@ export default function RedeemCertificatePage() {
         >
           {dbReady ? "Download certificate" : "Registering certificate…"}
         </motion.button>
-        <CertificateShareButtons
-          courseName={programTitle}
-          programSlug={attempt?.slug ?? ""}
-          verifyUrl={verifyUrl}
-          certificateNumber={certNumber}
-        />
+        {certNumber && (attempt?.slug ?? "") ? (
+          <CertificateShareButtons
+            courseName={programTitle}
+            programSlug={attempt?.slug ?? ""}
+            certificateNumber={certNumber}
+          />
+        ) : null}
         <Link
           href={`/verify/${encodeURIComponent(certNumber)}`}
           className="text-sm font-semibold text-primary hover:underline"
