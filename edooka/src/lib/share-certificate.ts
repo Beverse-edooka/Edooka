@@ -22,9 +22,13 @@ export function certificateSharePageUrl(certificateNumber: string): string {
   return `${origin}/share/certificate/${encodeURIComponent(certificateNumber)}`;
 }
 
-/** Opens LinkedIn feed composer with pre-filled caption text (image pasted separately). */
-export function linkedInShareUrl(caption: string): string {
-  return `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(caption)}`;
+/**
+ * LinkedIn link share — scrapes Open Graph from the share page (certificate PNG as og:image).
+ * Use this instead of `feed/?shareActive=true&text=` when the caption contains assessment URLs,
+ * which otherwise trigger a generic edooka.in preview instead of the certificate image.
+ */
+export function linkedInShareOffsiteUrl(sharePageUrl: string): string {
+  return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(sharePageUrl)}`;
 }
 
 /** WhatsApp message: caption + share page URL for certificate Open Graph preview. */

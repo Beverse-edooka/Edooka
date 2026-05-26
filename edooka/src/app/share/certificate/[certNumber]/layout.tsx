@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { getAppOrigin } from "@/lib/app-url";
+import { buildCertificateShareCaption } from "@/lib/share-certificate";
+import { getCertificateByNumber } from "@/server/queries/certificates";
 
 type Props = {
   children: React.ReactNode;
@@ -12,8 +14,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const origin = getAppOrigin();
   const image = `${origin}/api/certificate/png/${encodeURIComponent(certNumber)}`;
   const pageUrl = `${origin}/share/certificate/${encodeURIComponent(certNumber)}`;
-  const description =
+
+  let description =
     "I earned a verifiable skill assessment certificate from Edooka. Take your free assessment and get certified.";
+
+  try {
+    const row = await getCertificateByNumber(certNumber);
+    if (row && !row.revoked) {
+      description = buildCertificateShareCaption(row.programTitle, row.programSlug);
+    }
+  } catch {
+    /* use default description */
+  }
 
   return {
     title: "My Edooka certificate",
