@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
+import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import { cleanEnv, gmailConfigHint } from "@/lib/env-clean";
-
 export type SendMailOptions = {
   to: string;
   subject: string;
@@ -27,11 +27,12 @@ export function isGmailConfigured(): boolean {
  * SMTP transport. Tries SSL 465 first; STARTTLS 587 is the fallback in `sendMail`.
  * Explicit timeouts prevent Railway/Vercel from returning 502 when Gmail is slow.
  */
-function buildTransport(port: 465 | 587) {
+function buildTransport(port: 465 | 587): nodemailer.Transporter | null {
   const user = cleanEnv(process.env.GMAIL_USER);
   const pass = cleanGmailPassword(process.env.GMAIL_APP_PASSWORD);
   if (!user || !pass) return null;
-  return nodemailer.createTransport({
+
+  const options: SMTPTransport.Options = {
     host: "smtp.gmail.com",
     port,
     secure: port === 465,
@@ -40,8 +41,9 @@ function buildTransport(port: 465 | 587) {
     connectionTimeout: 10_000,
     greetingTimeout: 10_000,
     socketTimeout: 20_000,
-    pool: false,
-  });
+  };
+
+  return nodemailer.createTransport(options);
 }
 
 export function getMailTransport() {
