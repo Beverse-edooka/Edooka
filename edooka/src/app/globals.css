@@ -166,6 +166,62 @@ svg {
   box-shadow: 0 14px 28px rgba(255, 149, 88, 0.28);
 }
 
+/* Certificate success / verify action buttons (download + share) */
+.cert-action-btn {
+  display: inline-flex;
+  width: 100%;
+  max-width: 15.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.cert-action-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.cert-action-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.cert-action-btn-primary {
+  background-color: var(--color-primary);
+}
+
+.cert-action-btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+  box-shadow: 0 8px 22px rgba(255, 107, 53, 0.38);
+}
+
+.cert-action-btn-linkedin {
+  background-color: #0a66c2;
+}
+
+.cert-action-btn-linkedin:hover:not(:disabled) {
+  background-color: #095196;
+  box-shadow: 0 8px 22px rgba(10, 102, 194, 0.42);
+}
+
+.cert-action-btn-whatsapp {
+  background-color: #25d366;
+}
+
+.cert-action-btn-whatsapp:hover:not(:disabled) {
+  background-color: #20bd5a;
+  box-shadow: 0 8px 22px rgba(37, 211, 102, 0.42);
+}
+
 /* Stat cards */
 .stat-card {
   transition: transform 0.25s ease, box-shadow 0.25s ease;

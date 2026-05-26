@@ -483,14 +483,14 @@ function SuccessInner() {
         </p>
       </motion.div>
 
-      <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-2.5">
         <motion.button
           type="button"
-          whileHover={{ scale: 1.03 }}
+          whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           disabled={!certNumber || !!issueError}
           onClick={() => void downloadCert()}
-          className="w-full max-w-sm rounded-xl bg-primary px-5 py-2.5 font-semibold text-white shadow disabled:opacity-50 sm:px-6 sm:py-3"
+          className="cert-action-btn cert-action-btn-primary disabled:opacity-50"
           title={issueError ? "Register certificate first (refresh after fixing the error above)" : undefined}
         >
           Download PDF

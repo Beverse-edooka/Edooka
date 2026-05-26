@@ -121,12 +121,12 @@ export default function VerifyPage() {
           </article>
 
           {canShare ? (
-            <div className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-2.5">
               <button
                 type="button"
                 disabled={downloading}
                 onClick={() => void downloadPdf()}
-                className="w-full max-w-sm rounded-xl bg-primary px-5 py-2.5 font-semibold text-white shadow hover:bg-primary-hover disabled:opacity-50 sm:px-6 sm:py-3"
+                className="cert-action-btn cert-action-btn-primary disabled:opacity-50"
               >
                 {downloading ? "Preparing PDF…" : "Download PDF"}
               </button>
