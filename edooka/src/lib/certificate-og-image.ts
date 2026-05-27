@@ -7,9 +7,7 @@ import { certificates } from "@/lib/db/schema";
 import { getCertificateRenderInputFromDb } from "@/lib/certificate-from-db";
 import { renderCertificatePng } from "@/lib/certificate-template";
 import { renderStaticCertificateOgCard } from "@/lib/static-certificate-og-card";
-import { certificateOgImageApiUrl } from "@/lib/share-certificate";
-
-export { certificateOgImageApiUrl };
+import { resolveCertificateNumber } from "@/server/queries/certificates";
 
 /** WhatsApp reliably shows previews when og:image is under ~300 KB. */
 const WHATSAPP_OG_MAX_BYTES = 280_000;
@@ -73,13 +71,13 @@ export async function compressCertificateForOg(pngBuffer: Buffer): Promise<Buffe
   return canvas.toBuffer("image/jpeg", 0.5);
 }
 
-function normalizeCertNumber(certNumber: string): string {
-  return decodeURIComponent(certNumber).trim().toUpperCase();
+async function resolveForStorage(certNumber: string): Promise<string | null> {
+  return resolveCertificateNumber(certNumber);
 }
 
 /** Read stored OG JPEG (png_data column stores base64 JPEG bytes). */
 export async function getStoredOgJpeg(certNumber: string): Promise<Buffer | null> {
-  const normalized = normalizeCertNumber(certNumber);
+  const normalized = await resolveForStorage(certNumber);
   if (!normalized) return null;
 
   try {
@@ -113,7 +111,7 @@ export async function getStoredOgJpeg(certNumber: string): Promise<Buffer | null
 
 /** Render certificate, compress to JPEG, persist for fast crawler reads. */
 export async function ensureCertificateOgJpeg(certNumber: string): Promise<Buffer | null> {
-  const normalized = normalizeCertNumber(certNumber);
+  const normalized = await resolveForStorage(certNumber);
   if (!normalized) return null;
 
   const cached = await getStoredOgJpeg(normalized);

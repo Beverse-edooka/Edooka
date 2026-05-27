@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCertificateByNumber } from "@/server/queries/certificates";
+import { resolveCertificate } from "@/server/queries/certificates";
 
 /**
  * GET /api/verify/[token] — public certificate lookup.
@@ -24,7 +24,7 @@ export async function GET(
   const upper = raw.toUpperCase();
 
   try {
-    const row = await getCertificateByNumber(raw);
+    const row = await resolveCertificate(raw);
     if (!row) {
       return NextResponse.json({
         valid: false,

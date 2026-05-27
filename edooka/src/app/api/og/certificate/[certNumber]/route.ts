@@ -5,7 +5,7 @@ import {
   ogImageResponseHeaders,
 } from "@/lib/certificate-og-image";
 import { certificateOgImageApiUrl } from "@/lib/share-certificate";
-import { getCertificateByNumber } from "@/server/queries/certificates";
+import { resolveCertificate } from "@/server/queries/certificates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export async function GET(
   let holderName: string | undefined;
   let courseName: string | undefined;
   try {
-    const row = await getCertificateByNumber(normalized);
+    const row = await resolveCertificate(normalized);
     if (row && !row.revoked) {
       holderName = row.holderName;
       courseName = row.programTitle;

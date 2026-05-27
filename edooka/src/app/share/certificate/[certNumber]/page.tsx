@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { verifyUrlForCertificate } from "@/lib/app-url";
+import { extractCertificateSuffix } from "@/lib/certificate-lookup";
 import { ensureCertificateOgJpeg } from "@/lib/certificate-og-image";
-import { assessmentProgramUrl } from "@/lib/share-certificate";
-import { getCertificateByNumber } from "@/server/queries/certificates";
+import { assessmentProgramUrl, certificateShortShareUrl } from "@/lib/share-certificate";
+import { resolveCertificate } from "@/server/queries/certificates";
 
 type Props = {
   params: Promise<{ certNumber: string }>;
@@ -13,16 +14,23 @@ type Props = {
 /** Public landing for social crawlers; humans can verify or start an assessment. */
 export default async function ShareCertificatePage({ params, searchParams }: Props) {
   const { certNumber: raw } = await params;
-  const certNumber = decodeURIComponent(raw).trim();
+  const lookupKey = decodeURIComponent(raw).trim();
+  const suffix = extractCertificateSuffix(lookupKey);
   const sp = await searchParams;
+
+  const row = await resolveCertificate(suffix).catch(() => null);
+  const displayId = row?.certificateNumber ?? suffix;
+
   if (sp.verify === "1") {
-    redirect(verifyUrlForCertificate(certNumber));
+    redirect(verifyUrlForCertificate(displayId));
   }
 
-  // Warm compressed JPEG in DB so WhatsApp crawler gets a fast <300 KB image.
-  void ensureCertificateOgJpeg(certNumber).catch(() => {});
+  if (lookupKey.toUpperCase() !== suffix) {
+    redirect(certificateShortShareUrl(displayId));
+  }
 
-  const row = await getCertificateByNumber(certNumber).catch(() => null);
+  void ensureCertificateOgJpeg(suffix).catch(() => {});
+
   const assessmentHref = row?.programSlug
     ? assessmentProgramUrl(row.programSlug)
     : "/#assessments";
@@ -32,11 +40,11 @@ export default async function ShareCertificatePage({ params, searchParams }: Pro
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Edooka certificate</p>
       <h1 className="text-2xl font-extrabold">Certificate shared via Edooka</h1>
       <p className="text-sm text-text-secondary">
-        Certificate ID <span className="font-mono font-semibold">{certNumber}</span>
+        Certificate ID <span className="font-mono font-semibold">{displayId}</span>
       </p>
       <div className="flex flex-col items-center gap-3">
         <Link
-          href={verifyUrlForCertificate(certNumber)}
+          href={verifyUrlForCertificate(displayId)}
           className="rounded-xl bg-primary px-6 py-3 font-semibold text-white shadow hover:bg-primary-hover"
         >
           Verify this certificate

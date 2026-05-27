@@ -1,4 +1,32 @@
 import { getAppOrigin } from "@/lib/app-url";
+import { extractCertificateSuffix } from "@/lib/certificate-lookup";
+
+/** Public static OG image — always fast for WhatsApp/Facebook crawlers. */
+export function staticCertificateOgImageUrl(): string {
+  return `${getAppOrigin()}/og/edooka-certificate-share.jpg`;
+}
+
+/** Short hyphen-free share URL — iOS WhatsApp truncates paths with EDK-2026-XXXX. */
+export function certificateShortShareUrl(certificateNumber: string): string {
+  const suffix = extractCertificateSuffix(certificateNumber);
+  const origin = getAppOrigin();
+  return `${origin}/c/${encodeURIComponent(suffix)}`;
+}
+
+/** Stable OG image URL for WhatsApp crawlers (no cache-buster query string). */
+export function certificateOgImageApiUrl(certificateNumber: string): string {
+  const suffix = extractCertificateSuffix(certificateNumber);
+  return `${getAppOrigin()}/api/og/certificate/${encodeURIComponent(suffix)}`;
+}
+
+export function certificatePngUrl(certificateNumber: string): string {
+  const suffix = extractCertificateSuffix(certificateNumber);
+  return `${getAppOrigin()}/api/certificate/png/${encodeURIComponent(suffix)}`;
+}
+
+export function certificatePdfDownloadUrl(certificateNumber: string): string {
+  return `${certificatePngUrl(certificateNumber)}?download=1`;
+}
 
 /** Public assessments listing for a program — used in share captions. */
 export function assessmentProgramUrl(slug: string): string {
@@ -13,29 +41,9 @@ export function assessmentStartUrl(slug: string): string {
 }
 
 export function certificateSharePageUrl(certificateNumber: string): string {
+  const suffix = extractCertificateSuffix(certificateNumber);
   const origin = getAppOrigin();
-  return `${origin}/share/certificate/${encodeURIComponent(certificateNumber)}`;
-}
-
-/** Short link for WhatsApp — iOS often truncates long wa.me?text= payloads. */
-export function certificateShortShareUrl(certificateNumber: string): string {
-  const id = certificateNumber.trim();
-  const origin = getAppOrigin();
-  return `${origin}/c/${encodeURIComponent(id)}`;
-}
-
-/** Stable OG image URL for WhatsApp crawlers (no cache-buster query string). */
-export function certificateOgImageApiUrl(certificateNumber: string): string {
-  const id = certificateNumber.trim();
-  return `${getAppOrigin()}/api/og/certificate/${encodeURIComponent(id)}`;
-}
-
-export function certificatePngUrl(certificateNumber: string): string {
-  return `${getAppOrigin()}/api/certificate/png/${encodeURIComponent(certificateNumber)}`;
-}
-
-export function certificatePdfDownloadUrl(certificateNumber: string): string {
-  return `${certificatePngUrl(certificateNumber)}?download=1`;
+  return `${origin}/share/certificate/${encodeURIComponent(suffix)}`;
 }
 
 /**

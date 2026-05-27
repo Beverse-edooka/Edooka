@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { copyCertificatePngToClipboard } from "@/lib/copy-certificate-clipboard";
 import {
   buildCertificateShareCaptionForLinkedIn,
-  certificateOgImageApiUrl,
   certificatePngUrl,
   linkedInComposerUrl,
+  staticCertificateOgImageUrl,
   whatsAppShareUrl,
 } from "@/lib/share-certificate";
 
@@ -30,24 +30,6 @@ export function CertificateShareButtons({
   const certId = certificateNumber.trim();
   const linkedInCaption = buildCertificateShareCaptionForLinkedIn(courseName, programSlug);
   const pngUrl = certificatePngUrl(certId);
-
-  useEffect(() => {
-    let cancelled = false;
-    pngBlobRef.current = null;
-
-    if (!certId) return;
-
-    void fetch(pngUrl)
-      .then((res) => (res.ok ? res.blob() : null))
-      .then((blob) => {
-        if (!cancelled && blob) pngBlobRef.current = blob;
-      })
-      .catch(() => {});
-
-    return () => {
-      cancelled = true;
-    };
-  }, [certId, pngUrl]);
 
   async function onLinkedInClick(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
@@ -90,7 +72,7 @@ export function CertificateShareButtons({
     e.preventDefault();
     if (!certId) return;
 
-    void fetch(certificateOgImageApiUrl(certId)).catch(() => {});
+    void fetch(staticCertificateOgImageUrl()).catch(() => {});
     window.open(whatsAppShareUrl(courseName, programSlug, certId), "_blank", "noopener,noreferrer");
   }
 
