@@ -28,17 +28,9 @@ export function certificatePdfDownloadUrl(certificateNumber: string): string {
 /**
  * WhatsApp share message.
  *
- * WhatsApp generates a link-preview card for whichever URL appears LAST in the
- * message body (ideally alone on its own line). We place the certificate share
- * page URL last so WhatsApp reliably fetches its Open Graph tags (og:image =
- * certificate PNG, og:title = "{Name}'s Edooka Certificate").
- *
- * Format:
- *   I just obtained {course} certificate from Edooka.
- *   You can get yours here: {assessmentLink}
- *
- *   View my Certificate:
- *   {certificateShareLink}      ← standalone URL → triggers OG preview
+ * IMPORTANT: WhatsApp previews the FIRST https:// URL in the message.
+ * Only the certificate share link may use https — the assessment path is plain
+ * text so WhatsApp does not crawl the wrong page and skip the certificate image.
  */
 export function buildWhatsAppShareMessage(
   courseName: string,
@@ -46,13 +38,12 @@ export function buildWhatsAppShareMessage(
   certificateNumber: string,
 ): string {
   const certificateLink = certificateSharePageUrl(certificateNumber);
-  const courseLink = assessmentProgramUrl(programSlug);
+  const coursePath = assessmentProgramUrl(programSlug).replace(/^https?:\/\//i, "");
   return [
     `I just obtained ${courseName} certificate from Edooka.`,
-    `You can get yours here: ${courseLink}`,
+    `View my Certificate: ${certificateLink}`,
     "",
-    `View my Certificate:`,
-    certificateLink,
+    `You can get yours here: ${coursePath}`,
   ].join("\n");
 }
 
@@ -64,7 +55,7 @@ export function buildCertificateOpenGraphTitle(holderName: string): string {
 
 /** Open Graph description for crawlers (WhatsApp, LinkedIn link previews). */
 export function buildCertificateOpenGraphDescription(courseName: string): string {
-  return `I just completed ${courseName} on Edooka 🎓`;
+  return `I just completed ${courseName} on Edooka`;
 }
 
 /**

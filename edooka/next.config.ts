@@ -20,6 +20,22 @@ const nextConfig: NextConfig = {
       "./node_modules/dejavu-fonts-ttf/ttf/DejaVuSerif-Italic.ttf",
       "./node_modules/dejavu-fonts-ttf/ttf/DejaVuSansMono.ttf",
     ],
+    "/api/og/certificate/**": [
+      "./public/certificate-template.png",
+      "./public/fonts/**/*.ttf",
+      "./node_modules/dejavu-fonts-ttf/ttf/DejaVuSans.ttf",
+      "./node_modules/dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf",
+      "./node_modules/dejavu-fonts-ttf/ttf/DejaVuSerif-Italic.ttf",
+      "./node_modules/dejavu-fonts-ttf/ttf/DejaVuSansMono.ttf",
+    ],
+    "/share/certificate/**": [
+      "./public/certificate-template.png",
+      "./public/fonts/**/*.ttf",
+      "./node_modules/dejavu-fonts-ttf/ttf/DejaVuSans.ttf",
+      "./node_modules/dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf",
+      "./node_modules/dejavu-fonts-ttf/ttf/DejaVuSerif-Italic.ttf",
+      "./node_modules/dejavu-fonts-ttf/ttf/DejaVuSansMono.ttf",
+    ],
   },
 };
 

@@ -7,6 +7,7 @@ import { getAppOrigin, verifyUrlForCertificate } from "@/lib/app-url";
 import { resolveCertificateIssueEmail } from "@/lib/certificate-issue-email";
 import { resolvePaymentPaidForOrder } from "@/lib/cashfree-order";
 import { getActiveProgramBySlug } from "@/server/queries/programs";
+import { compressCertificateForOg } from "@/lib/certificate-og-image";
 import { renderCertificatePng } from "@/lib/certificate-template";
 import type { BundleType } from "@/types";
 
@@ -171,9 +172,7 @@ export async function POST(req: NextRequest) {
         .returning();
     }
 
-    // Render PNG once at issue time and store as base64 in the DB.
-    // /api/og/certificate/[certNumber] reads this column — pure DB read, no canvas cold-start.
-    // WhatsApp's 3-second crawler timeout is no longer a problem.
+    // Pre-render JPEG (<300 KB) for WhatsApp OG preview — stored as base64 in png_data.
     let pngData: string | null = null;
     try {
       const pngBuf = await renderCertificatePng({
@@ -182,9 +181,10 @@ export async function POST(req: NextRequest) {
         certificateNumber: certNumber,
         verifyUrl,
       });
-      pngData = pngBuf.toString("base64");
+      const jpegBuf = await compressCertificateForOg(pngBuf);
+      pngData = jpegBuf.toString("base64");
     } catch (renderErr) {
-      console.error("[certificate/issue] PNG pre-render failed (non-fatal):", renderErr);
+      console.error("[certificate/issue] OG image pre-render failed (non-fatal):", renderErr);
     }
 
     await db.insert(certificates).values({

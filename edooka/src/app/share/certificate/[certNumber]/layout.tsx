@@ -17,9 +17,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const certNumber = decodeURIComponent(raw).trim();
   const origin = getAppOrigin();
   const pageUrl = certificateSharePageUrl(certNumber);
-  // Use the dedicated OG image route which sets a long CDN cache so WhatsApp's
-  // crawler (3s timeout) always gets a fast response after the first warm hit.
-  const image = `${origin}/api/og/certificate/${encodeURIComponent(certNumber)}`;
 
   let title = "Edooka Certificate";
   let description =
@@ -44,22 +41,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: "Edooka",
       title,
       description,
-      images: [
-        {
-          url: image,
-          secureUrl: image,
-          width: 1024,
-          height: 683,
-          alt: title,
-          type: "image/png",
-        },
-      ],
+      // opengraph-image.tsx in this folder is picked up automatically by Next.js
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: [image],
     },
     alternates: {
       canonical: pageUrl,

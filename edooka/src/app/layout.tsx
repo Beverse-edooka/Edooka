@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Footer } from "@/components/layout/Footer";
 import { Nav } from "@/components/layout/Nav";
+import { getAppOrigin } from "@/lib/app-url";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -10,6 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getAppOrigin()),
   title: "edooka | Validate your skills",
   description: "Validate your skills. Get certified in 15 minutes.",
   icons: {

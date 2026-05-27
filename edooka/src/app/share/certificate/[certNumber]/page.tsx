@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { verifyUrlForCertificate } from "@/lib/app-url";
+import { ensureCertificateOgJpeg } from "@/lib/certificate-og-image";
+import { assessmentProgramUrl } from "@/lib/share-certificate";
+import { getCertificateByNumber } from "@/server/queries/certificates";
 
 type Props = {
   params: Promise<{ certNumber: string }>;
@@ -16,6 +19,14 @@ export default async function ShareCertificatePage({ params, searchParams }: Pro
     redirect(verifyUrlForCertificate(certNumber));
   }
 
+  // Warm compressed JPEG in DB so WhatsApp crawler gets a fast <300 KB image.
+  void ensureCertificateOgJpeg(certNumber).catch(() => {});
+
+  const row = await getCertificateByNumber(certNumber).catch(() => null);
+  const assessmentHref = row?.programSlug
+    ? assessmentProgramUrl(row.programSlug)
+    : "/#assessments";
+
   return (
     <section className="quiz-shell space-y-6 py-10 text-center">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Edooka certificate</p>
@@ -30,7 +41,7 @@ export default async function ShareCertificatePage({ params, searchParams }: Pro
         >
           Verify this certificate
         </Link>
-        <Link href="/#assessments" className="text-sm font-semibold text-primary">
+        <Link href={assessmentHref} className="text-sm font-semibold text-primary">
           Take your own assessment →
         </Link>
       </div>
