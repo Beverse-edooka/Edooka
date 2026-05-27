@@ -12,14 +12,49 @@ export function assessmentStartUrl(slug: string): string {
   return `${origin}/start/${encodeURIComponent(slug)}`;
 }
 
-export function buildCertificateShareCaption(courseName: string, programSlug: string): string {
-  const assessmentLink = assessmentProgramUrl(programSlug);
-  return `I just obtained ${courseName} skill certificate from Edooka. You can get yours here: ${assessmentLink}`;
+export function certificateSharePageUrl(certificateNumber: string): string {
+  const origin = getAppOrigin();
+  return `${origin}/share/certificate/${encodeURIComponent(certificateNumber)}`;
+}
+
+export function certificatePngUrl(certificateNumber: string): string {
+  return `${getAppOrigin()}/api/certificate/png/${encodeURIComponent(certificateNumber)}`;
+}
+
+export function certificatePdfDownloadUrl(certificateNumber: string): string {
+  return `${certificatePngUrl(certificateNumber)}?download=1`;
+}
+
+/** WhatsApp share body (also used as fallback OG description source). */
+export function buildWhatsAppShareMessage(
+  courseName: string,
+  programSlug: string,
+  certificateNumber: string,
+): string {
+  const certificateLink = certificateSharePageUrl(certificateNumber);
+  const courseLink = assessmentProgramUrl(programSlug);
+  return [
+    `I just obtained ${courseName} certificate from Edooka.`,
+    `View my Certificate: ${certificateLink}`,
+    "",
+    `You can get yours here: ${courseLink}`,
+  ].join("\n");
+}
+
+/** Open Graph title for certificate share pages — e.g. "John's Edooka Certificate". */
+export function buildCertificateOpenGraphTitle(holderName: string): string {
+  const name = holderName.trim() || "My";
+  return `${name}'s Edooka Certificate`;
+}
+
+/** Open Graph description for crawlers (WhatsApp, LinkedIn link previews). */
+export function buildCertificateOpenGraphDescription(courseName: string): string {
+  return `I just completed ${courseName} on Edooka 🎓`;
 }
 
 /**
- * LinkedIn composer caption — same message but without `https://` so LinkedIn is less
- * likely to replace your text with a generic edooka.in link preview card.
+ * LinkedIn composer caption — without `https://` so LinkedIn is less likely to
+ * replace text with a generic edooka.in link preview card.
  */
 export function buildCertificateShareCaptionForLinkedIn(
   courseName: string,
@@ -29,29 +64,15 @@ export function buildCertificateShareCaptionForLinkedIn(
   return `I just obtained ${courseName} skill certificate from Edooka. You can get yours here: ${path}`;
 }
 
-export function certificateSharePageUrl(certificateNumber: string): string {
-  const origin = getAppOrigin();
-  return `${origin}/share/certificate/${encodeURIComponent(certificateNumber)}`;
-}
-
 /**
  * Opens the LinkedIn post composer with the caption pre-filled (`text=`).
- * Do not pass a `url=` param — LinkedIn ignores `text` and only shows a link card (blank caption).
+ * Do not pass a `url=` param — LinkedIn ignores `text` and only shows a link card.
  */
 export function linkedInComposerUrl(caption: string): string {
   return `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(caption)}`;
 }
 
-/** WhatsApp message: caption + share page URL for certificate Open Graph preview. */
-export function whatsAppShareUrl(caption: string, previewPageUrl: string): string {
-  const body = previewPageUrl ? `${caption}\n\n${previewPageUrl}` : caption;
-  return `https://wa.me/?text=${encodeURIComponent(body)}`;
-}
-
-export function certificatePngUrl(certificateNumber: string): string {
-  return `${getAppOrigin()}/api/certificate/png/${encodeURIComponent(certificateNumber)}`;
-}
-
-export function certificatePdfDownloadUrl(certificateNumber: string): string {
-  return `${certificatePngUrl(certificateNumber)}?download=1`;
+/** WhatsApp — message includes share-page URL so crawlers load certificate Open Graph preview. */
+export function whatsAppShareUrl(message: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(message)}`;
 }

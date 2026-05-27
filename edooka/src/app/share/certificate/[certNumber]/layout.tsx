@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import { getAppOrigin } from "@/lib/app-url";
-import { buildCertificateShareCaption } from "@/lib/share-certificate";
+import {
+  buildCertificateOpenGraphDescription,
+  buildCertificateOpenGraphTitle,
+  certificatePngUrl,
+  certificateSharePageUrl,
+} from "@/lib/share-certificate";
 import { getCertificateByNumber } from "@/server/queries/certificates";
 
 type Props = {
@@ -12,37 +17,51 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { certNumber: raw } = await params;
   const certNumber = decodeURIComponent(raw).trim();
   const origin = getAppOrigin();
-  const image = `${origin}/api/certificate/png/${encodeURIComponent(certNumber)}`;
-  const pageUrl = `${origin}/share/certificate/${encodeURIComponent(certNumber)}`;
+  const pageUrl = certificateSharePageUrl(certNumber);
+  const image = certificatePngUrl(certNumber);
 
+  let title = "Edooka Certificate";
   let description =
     "I earned a verifiable skill assessment certificate from Edooka. Take your free assessment and get certified.";
 
   try {
     const row = await getCertificateByNumber(certNumber);
     if (row && !row.revoked) {
-      description = buildCertificateShareCaption(row.programTitle, row.programSlug);
+      title = buildCertificateOpenGraphTitle(row.holderName);
+      description = buildCertificateOpenGraphDescription(row.programTitle);
     }
   } catch {
-    /* use default description */
+    /* use defaults */
   }
 
   return {
-    title: "My Edooka certificate",
+    title,
     description,
     openGraph: {
       type: "website",
       url: pageUrl,
       siteName: "Edooka",
-      title: "Edooka certificate of achievement",
+      title,
       description,
-      images: [{ url: image, width: 1024, height: 683, alt: "Edooka certificate" }],
+      images: [
+        {
+          url: image,
+          secureUrl: image,
+          width: 1024,
+          height: 683,
+          alt: title,
+          type: "image/png",
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
-      title: "My Edooka certificate",
+      title,
       description,
       images: [image],
+    },
+    alternates: {
+      canonical: pageUrl,
     },
   };
 }

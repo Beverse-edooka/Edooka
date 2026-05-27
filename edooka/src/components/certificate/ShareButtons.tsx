@@ -3,10 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { copyCertificatePngToClipboard } from "@/lib/copy-certificate-clipboard";
 import {
-  buildCertificateShareCaption,
   buildCertificateShareCaptionForLinkedIn,
+  buildWhatsAppShareMessage,
   certificatePngUrl,
-  certificateSharePageUrl,
   linkedInComposerUrl,
   whatsAppShareUrl,
 } from "@/lib/share-certificate";
@@ -31,10 +30,10 @@ export function CertificateShareButtons({
   const [linkedInHint, setLinkedInHint] = useState<string | null>(null);
   const pngBlobRef = useRef<Blob | null>(null);
 
-  const caption = buildCertificateShareCaption(courseName, programSlug);
   const linkedInCaption = buildCertificateShareCaptionForLinkedIn(courseName, programSlug);
-  const sharePageUrl = certificateSharePageUrl(certificateNumber);
-  const waHref = whatsAppShareUrl(caption, sharePageUrl);
+  const waHref = whatsAppShareUrl(
+    buildWhatsAppShareMessage(courseName, programSlug, certificateNumber),
+  );
   const pngUrl = certificatePngUrl(certificateNumber);
 
   useEffect(() => {
