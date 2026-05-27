@@ -3,7 +3,6 @@ import { getAppOrigin } from "@/lib/app-url";
 import {
   buildCertificateOpenGraphDescription,
   buildCertificateOpenGraphTitle,
-  certificatePngUrl,
   certificateSharePageUrl,
 } from "@/lib/share-certificate";
 import { getCertificateByNumber } from "@/server/queries/certificates";
@@ -18,7 +17,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const certNumber = decodeURIComponent(raw).trim();
   const origin = getAppOrigin();
   const pageUrl = certificateSharePageUrl(certNumber);
-  const image = certificatePngUrl(certNumber);
+  // Use the dedicated OG image route which sets a long CDN cache so WhatsApp's
+  // crawler (3s timeout) always gets a fast response after the first warm hit.
+  const image = `${origin}/api/og/certificate/${encodeURIComponent(certNumber)}`;
 
   let title = "Edooka Certificate";
   let description =

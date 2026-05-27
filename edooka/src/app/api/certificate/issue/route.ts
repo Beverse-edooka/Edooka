@@ -181,6 +181,11 @@ export async function POST(req: NextRequest) {
       verificationUrl: verifyUrl,
     });
 
+    // Fire-and-forget: warm the OG image CDN cache so WhatsApp's crawler
+    // gets a fast response (<100 ms) instead of a cold-start render (3–8 s).
+    const ogImageUrl = `${getAppOrigin()}/api/og/certificate/${encodeURIComponent(certNumber)}`;
+    void fetch(ogImageUrl, { method: "GET" }).catch(() => {});
+
     return NextResponse.json({
       ok: true,
       certificateNumber: certNumber,
