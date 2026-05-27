@@ -17,6 +17,13 @@ export function certificateSharePageUrl(certificateNumber: string): string {
   return `${origin}/share/certificate/${encodeURIComponent(certificateNumber)}`;
 }
 
+/** Short link for WhatsApp — iOS often truncates long wa.me?text= payloads. */
+export function certificateShortShareUrl(certificateNumber: string): string {
+  const id = certificateNumber.trim();
+  const origin = getAppOrigin();
+  return `${origin}/c/${encodeURIComponent(id)}`;
+}
+
 export function certificatePngUrl(certificateNumber: string): string {
   return `${getAppOrigin()}/api/certificate/png/${encodeURIComponent(certificateNumber)}`;
 }
@@ -37,7 +44,7 @@ export function buildWhatsAppShareMessage(
   programSlug: string,
   certificateNumber: string,
 ): string {
-  const certificateLink = certificateSharePageUrl(certificateNumber);
+  const certificateLink = certificateShortShareUrl(certificateNumber);
   const coursePath = assessmentProgramUrl(programSlug).replace(/^https?:\/\//i, "");
   return [
     `I just obtained ${courseName} certificate from Edooka.`,
@@ -45,6 +52,17 @@ export function buildWhatsAppShareMessage(
     "",
     `You can get yours here: ${coursePath}`,
   ].join("\n");
+}
+
+/**
+ * WhatsApp deep link — ONLY the certificate URL in the query string.
+ * iOS truncates long wa.me?text= values (your link was cut to …/share/ with no ID).
+ * Caption is copied to clipboard separately when the user taps Share on WhatsApp.
+ */
+export function whatsAppShareUrl(certificateNumber: string): string {
+  const id = certificateNumber.trim();
+  const link = certificateShortShareUrl(id);
+  return `https://api.whatsapp.com/send?text=${encodeURIComponent(link)}`;
 }
 
 /** Open Graph title for certificate share pages — e.g. "John's Edooka Certificate". */
@@ -78,7 +96,3 @@ export function linkedInComposerUrl(caption: string): string {
   return `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(caption)}`;
 }
 
-/** WhatsApp — message includes share-page URL so crawlers load certificate Open Graph preview. */
-export function whatsAppShareUrl(message: string): string {
-  return `https://wa.me/?text=${encodeURIComponent(message)}`;
-}

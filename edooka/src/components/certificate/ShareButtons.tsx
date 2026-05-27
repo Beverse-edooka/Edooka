@@ -17,9 +17,6 @@ type Props = {
   className?: string;
 };
 
-/**
- * LinkedIn: pre-fill caption, copy certificate PNG (preloaded) before opening the tab.
- */
 export function CertificateShareButtons({
   courseName,
   programSlug,
@@ -30,15 +27,16 @@ export function CertificateShareButtons({
   const [linkedInHint, setLinkedInHint] = useState<string | null>(null);
   const pngBlobRef = useRef<Blob | null>(null);
 
+  const certId = certificateNumber.trim();
   const linkedInCaption = buildCertificateShareCaptionForLinkedIn(courseName, programSlug);
-  const waHref = whatsAppShareUrl(
-    buildWhatsAppShareMessage(courseName, programSlug, certificateNumber),
-  );
-  const pngUrl = certificatePngUrl(certificateNumber);
+  const fullCaption = buildWhatsAppShareMessage(courseName, programSlug, certId);
+  const pngUrl = certificatePngUrl(certId);
 
   useEffect(() => {
     let cancelled = false;
     pngBlobRef.current = null;
+
+    if (!certId) return;
 
     void fetch(pngUrl)
       .then((res) => (res.ok ? res.blob() : null))
@@ -50,11 +48,11 @@ export function CertificateShareButtons({
     return () => {
       cancelled = true;
     };
-  }, [pngUrl]);
+  }, [certId, pngUrl]);
 
   async function onLinkedInClick(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
-    if (linkedInBusy) return;
+    if (linkedInBusy || !certId) return;
     setLinkedInBusy(true);
     setLinkedInHint(null);
 
@@ -69,9 +67,7 @@ export function CertificateShareButtons({
       }
 
       let copied = false;
-      if (blob) {
-        copied = await copyCertificatePngToClipboard(blob);
-      }
+      if (blob) copied = await copyCertificatePngToClipboard(blob);
 
       if (copied) {
         setLinkedInHint(
@@ -91,11 +87,21 @@ export function CertificateShareButtons({
     }
   }
 
+  function onWhatsAppClick(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    if (!certId) return;
+
+    void navigator.clipboard.writeText(fullCaption).catch(() => {});
+    window.open(whatsAppShareUrl(certId), "_blank", "noopener,noreferrer");
+    setLinkedInHint("Caption copied — paste in WhatsApp after the link loads (long press → Paste).");
+    window.setTimeout(() => setLinkedInHint(null), 10_000);
+  }
+
   return (
     <div className={`flex w-full max-w-[15.5rem] flex-col items-stretch gap-2.5 ${className}`}>
       <button
         type="button"
-        disabled={linkedInBusy}
+        disabled={linkedInBusy || !certId}
         onClick={(e) => void onLinkedInClick(e)}
         className="cert-action-btn cert-action-btn-linkedin disabled:opacity-70"
       >
@@ -105,15 +111,15 @@ export function CertificateShareButtons({
         {linkedInBusy ? "Opening…" : "Share on LinkedIn"}
       </button>
 
-      <a
-        href={waHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="cert-action-btn cert-action-btn-whatsapp"
+      <button
+        type="button"
+        disabled={!certId}
+        onClick={onWhatsAppClick}
+        className="cert-action-btn cert-action-btn-whatsapp disabled:opacity-70"
       >
         <span aria-hidden>💬</span>
         Share on WhatsApp
-      </a>
+      </button>
 
       {linkedInHint ? (
         <p className="text-center text-[11px] leading-snug text-text-muted">{linkedInHint}</p>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { certificateShareMetadata } from "@/lib/certificate-share-metadata";
-import { certificateSharePageUrl } from "@/lib/share-certificate";
+import { certificateShortShareUrl } from "@/lib/share-certificate";
 
 type Props = {
   children: React.ReactNode;
@@ -10,11 +10,15 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { certNumber: raw } = await params;
   const certNumber = decodeURIComponent(raw).trim();
-  const pageUrl = certificateSharePageUrl(certNumber);
-  const ogImagePath = `/share/certificate/${encodeURIComponent(certNumber)}/opengraph-image`;
+  const pageUrl = certificateShortShareUrl(certNumber);
+  const ogImagePath = `/c/${encodeURIComponent(certNumber)}/opengraph-image`;
   return certificateShareMetadata(certNumber, pageUrl, ogImagePath);
 }
 
-export default function ShareCertificateLayout({ children }: Props) {
+export default function ShortCertificateShareLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return children;
 }
