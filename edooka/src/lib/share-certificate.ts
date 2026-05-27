@@ -25,7 +25,21 @@ export function certificatePdfDownloadUrl(certificateNumber: string): string {
   return `${certificatePngUrl(certificateNumber)}?download=1`;
 }
 
-/** WhatsApp share body (also used as fallback OG description source). */
+/**
+ * WhatsApp share message.
+ *
+ * WhatsApp generates a link-preview card for whichever URL appears LAST in the
+ * message body (ideally alone on its own line). We place the certificate share
+ * page URL last so WhatsApp reliably fetches its Open Graph tags (og:image =
+ * certificate PNG, og:title = "{Name}'s Edooka Certificate").
+ *
+ * Format:
+ *   I just obtained {course} certificate from Edooka.
+ *   You can get yours here: {assessmentLink}
+ *
+ *   View my Certificate:
+ *   {certificateShareLink}      ← standalone URL → triggers OG preview
+ */
 export function buildWhatsAppShareMessage(
   courseName: string,
   programSlug: string,
@@ -35,9 +49,10 @@ export function buildWhatsAppShareMessage(
   const courseLink = assessmentProgramUrl(programSlug);
   return [
     `I just obtained ${courseName} certificate from Edooka.`,
-    `View my Certificate: ${certificateLink}`,
-    "",
     `You can get yours here: ${courseLink}`,
+    "",
+    `View my Certificate:`,
+    certificateLink,
   ].join("\n");
 }
 
