@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { copyCertificatePngToClipboard } from "@/lib/copy-certificate-clipboard";
 import {
   buildCertificateShareCaptionForLinkedIn,
-  buildWhatsAppShareMessage,
+  certificateOgImageApiUrl,
   certificatePngUrl,
   linkedInComposerUrl,
   whatsAppShareUrl,
@@ -29,7 +29,6 @@ export function CertificateShareButtons({
 
   const certId = certificateNumber.trim();
   const linkedInCaption = buildCertificateShareCaptionForLinkedIn(courseName, programSlug);
-  const fullCaption = buildWhatsAppShareMessage(courseName, programSlug, certId);
   const pngUrl = certificatePngUrl(certId);
 
   useEffect(() => {
@@ -91,10 +90,8 @@ export function CertificateShareButtons({
     e.preventDefault();
     if (!certId) return;
 
-    void navigator.clipboard.writeText(fullCaption).catch(() => {});
-    window.open(whatsAppShareUrl(certId), "_blank", "noopener,noreferrer");
-    setLinkedInHint("Caption copied — paste in WhatsApp after the link loads (long press → Paste).");
-    window.setTimeout(() => setLinkedInHint(null), 10_000);
+    void fetch(certificateOgImageApiUrl(certId)).catch(() => {});
+    window.open(whatsAppShareUrl(courseName, programSlug, certId), "_blank", "noopener,noreferrer");
   }
 
   return (

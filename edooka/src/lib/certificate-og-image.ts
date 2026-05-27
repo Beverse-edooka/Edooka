@@ -1,9 +1,15 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { certificates } from "@/lib/db/schema";
 import { getCertificateRenderInputFromDb } from "@/lib/certificate-from-db";
 import { renderCertificatePng } from "@/lib/certificate-template";
+import { renderStaticCertificateOgCard } from "@/lib/static-certificate-og-card";
+import { certificateOgImageApiUrl } from "@/lib/share-certificate";
+
+export { certificateOgImageApiUrl };
 
 /** WhatsApp reliably shows previews when og:image is under ~300 KB. */
 const WHATSAPP_OG_MAX_BYTES = 280_000;
@@ -18,6 +24,31 @@ const OG_HEADERS = {
 
 export function ogImageResponseHeaders(): HeadersInit {
   return { ...OG_HEADERS };
+}
+
+let staticFileJpeg: Buffer | null | undefined;
+
+function getPublicStaticOgJpeg(): Buffer | null {
+  if (staticFileJpeg !== undefined) return staticFileJpeg;
+  try {
+    staticFileJpeg = readFileSync(
+      join(process.cwd(), "public", "og", "edooka-certificate-share.jpg"),
+    );
+    return staticFileJpeg;
+  } catch {
+    staticFileJpeg = null;
+    return null;
+  }
+}
+
+/** Last-resort preview image so WhatsApp always gets a 200 JPEG. */
+export async function getStaticFallbackOgJpeg(options?: {
+  holderName?: string;
+  courseName?: string;
+}): Promise<Buffer> {
+  const fromFile = getPublicStaticOgJpeg();
+  if (fromFile && fromFile.length > 0) return fromFile;
+  return renderStaticCertificateOgCard(options);
 }
 
 /** Resize + JPEG compress so WhatsApp / Facebook crawlers accept the preview image. */
@@ -104,4 +135,14 @@ export async function ensureCertificateOgJpeg(certNumber: string): Promise<Buffe
   }
 
   return jpeg;
+}
+
+/** Dynamic certificate JPEG, else static branded card (never 404 for crawlers). */
+export async function getCertificateOgJpegForCrawler(
+  certNumber: string,
+  meta?: { holderName?: string; courseName?: string },
+): Promise<Buffer> {
+  const dynamic = await ensureCertificateOgJpeg(certNumber);
+  if (dynamic) return dynamic;
+  return getStaticFallbackOgJpeg(meta);
 }

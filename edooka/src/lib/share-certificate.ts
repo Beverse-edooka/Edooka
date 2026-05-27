@@ -24,6 +24,12 @@ export function certificateShortShareUrl(certificateNumber: string): string {
   return `${origin}/c/${encodeURIComponent(id)}`;
 }
 
+/** Stable OG image URL for WhatsApp crawlers (no cache-buster query string). */
+export function certificateOgImageApiUrl(certificateNumber: string): string {
+  const id = certificateNumber.trim();
+  return `${getAppOrigin()}/api/og/certificate/${encodeURIComponent(id)}`;
+}
+
 export function certificatePngUrl(certificateNumber: string): string {
   return `${getAppOrigin()}/api/certificate/png/${encodeURIComponent(certificateNumber)}`;
 }
@@ -39,6 +45,11 @@ export function certificatePdfDownloadUrl(certificateNumber: string): string {
  * Only the certificate share link may use https — the assessment path is plain
  * text so WhatsApp does not crawl the wrong page and skip the certificate image.
  */
+/**
+ * WhatsApp share text.
+ * - Certificate URL on line 1 (only https:// in message) so preview targets the cert page.
+ * - Assessment path without https so WhatsApp does not crawl the wrong link first.
+ */
 export function buildWhatsAppShareMessage(
   courseName: string,
   programSlug: string,
@@ -47,22 +58,22 @@ export function buildWhatsAppShareMessage(
   const certificateLink = certificateShortShareUrl(certificateNumber);
   const coursePath = assessmentProgramUrl(programSlug).replace(/^https?:\/\//i, "");
   return [
+    certificateLink,
+    "",
     `I just obtained ${courseName} certificate from Edooka.`,
-    `View my Certificate: ${certificateLink}`,
     "",
     `You can get yours here: ${coursePath}`,
   ].join("\n");
 }
 
-/**
- * WhatsApp deep link — ONLY the certificate URL in the query string.
- * iOS truncates long wa.me?text= values (your link was cut to …/share/ with no ID).
- * Caption is copied to clipboard separately when the user taps Share on WhatsApp.
- */
-export function whatsAppShareUrl(certificateNumber: string): string {
-  const id = certificateNumber.trim();
-  const link = certificateShortShareUrl(id);
-  return `https://api.whatsapp.com/send?text=${encodeURIComponent(link)}`;
+/** Opens WhatsApp with full caption + certificate link (URL first for preview). */
+export function whatsAppShareUrl(
+  courseName: string,
+  programSlug: string,
+  certificateNumber: string,
+): string {
+  const message = buildWhatsAppShareMessage(courseName, programSlug, certificateNumber);
+  return `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
 }
 
 /** Open Graph title for certificate share pages — e.g. "John's Edooka Certificate". */

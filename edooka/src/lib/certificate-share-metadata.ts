@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getAppOrigin } from "@/lib/app-url";
+import { certificateOgImageApiUrl } from "@/lib/share-certificate";
 import {
   buildCertificateOpenGraphDescription,
   buildCertificateOpenGraphTitle,
@@ -9,10 +9,8 @@ import { getCertificateByNumber } from "@/server/queries/certificates";
 export async function certificateShareMetadata(
   certNumber: string,
   pageUrl: string,
-  ogImagePath: string,
 ): Promise<Metadata> {
-  const origin = getAppOrigin();
-  const ogImage = `${origin}${ogImagePath.startsWith("/") ? ogImagePath : `/${ogImagePath}`}`;
+  const ogImage = certificateOgImageApiUrl(certNumber);
 
   let title = "Edooka Certificate";
   let description =
@@ -31,12 +29,14 @@ export async function certificateShareMetadata(
   return {
     title,
     description,
+    metadataBase: undefined,
     openGraph: {
       type: "website",
       url: pageUrl,
       siteName: "Edooka",
       title,
       description,
+      locale: "en_IN",
       images: [
         {
           url: ogImage,
@@ -52,10 +52,17 @@ export async function certificateShareMetadata(
       card: "summary_large_image",
       title,
       description,
-      images: [ogImage],
+      images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
     },
     alternates: {
       canonical: pageUrl,
+    },
+    other: {
+      "og:image": ogImage,
+      "og:image:secure_url": ogImage,
+      "og:image:type": "image/jpeg",
+      "og:image:width": "1200",
+      "og:image:height": "630",
     },
   };
 }
