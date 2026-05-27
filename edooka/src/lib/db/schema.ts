@@ -127,6 +127,8 @@ export const certificates = pgTable("certificates", {
   revoked: boolean("revoked").notNull().default(false),
   pdfUrl: text("pdf_url").notNull(),
   verificationUrl: text("verification_url").notNull(),
+  /** Base64-encoded PNG stored at issue time. Served by /api/og/certificate/[certNumber]. */
+  pngData: text("png_data"),
   issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -7,6 +7,7 @@ import { getAppOrigin, verifyUrlForCertificate } from "@/lib/app-url";
 import { resolveCertificateIssueEmail } from "@/lib/certificate-issue-email";
 import { resolvePaymentPaidForOrder } from "@/lib/cashfree-order";
 import { getActiveProgramBySlug } from "@/server/queries/programs";
+import { renderCertificatePng } from "@/lib/certificate-template";
 import type { BundleType } from "@/types";
 
 export const runtime = "nodejs";
@@ -170,6 +171,22 @@ export async function POST(req: NextRequest) {
         .returning();
     }
 
+    // Render PNG once at issue time and store as base64 in the DB.
+    // /api/og/certificate/[certNumber] reads this column — pure DB read, no canvas cold-start.
+    // WhatsApp's 3-second crawler timeout is no longer a problem.
+    let pngData: string | null = null;
+    try {
+      const pngBuf = await renderCertificatePng({
+        fullName: name,
+        courseName: program.title,
+        certificateNumber: certNumber,
+        verifyUrl,
+      });
+      pngData = pngBuf.toString("base64");
+    } catch (renderErr) {
+      console.error("[certificate/issue] PNG pre-render failed (non-fatal):", renderErr);
+    }
+
     await db.insert(certificates).values({
       userId: user.id,
       programId: program.id,
@@ -179,12 +196,8 @@ export async function POST(req: NextRequest) {
       qrToken,
       pdfUrl,
       verificationUrl: verifyUrl,
+      pngData,
     });
-
-    // Fire-and-forget: warm the OG image CDN cache so WhatsApp's crawler
-    // gets a fast response (<100 ms) instead of a cold-start render (3–8 s).
-    const ogImageUrl = `${getAppOrigin()}/api/og/certificate/${encodeURIComponent(certNumber)}`;
-    void fetch(ogImageUrl, { method: "GET" }).catch(() => {});
 
     return NextResponse.json({
       ok: true,

@@ -1,55 +1,68 @@
 import { NextRequest, NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { certificates } from "@/lib/db/schema";
 import { getCertificateRenderInputFromDb } from "@/lib/certificate-from-db";
 import { renderCertificatePng } from "@/lib/certificate-template";
 
 export const runtime = "nodejs";
 
+const PNG_HEADERS = {
+  "Content-Type": "image/png",
+  "Content-Disposition": "inline",
+  // 30-day CDN + 1-day browser cache. s-maxage makes Vercel/Railway edge cache it.
+  "Cache-Control": "public, s-maxage=2592000, max-age=86400, stale-while-revalidate=86400, immutable",
+  "Access-Control-Allow-Origin": "*",
+  "X-Content-Type-Options": "nosniff",
+};
+
 /**
  * GET /api/og/certificate/[certNumber]
  *
- * Dedicated Open Graph image endpoint used in og:image meta tags.
- * Unlike /api/certificate/png/[certNumber] (which is also used for downloads),
- * this route:
- *  1. Renders the PNG inline
- *  2. Sets a long CDN cache (immutable) so Vercel/Railway edges cache it after
- *     the first crawl hit — subsequent WhatsApp/LinkedIn crawls get instant
- *     responses from the CDN without hitting the serverless function.
+ * Serves the certificate PNG for og:image meta tags.
  *
- * WhatsApp's crawler has a ~3s timeout. After the first warm hit this route
- * responds from CDN in <100 ms.
+ * Fast path (< 10 ms): reads pre-rendered base64 PNG stored in the DB at issue time.
+ * Slow fallback: live canvas render (only for old certificates that predate this column).
+ *
+ * WhatsApp/LinkedIn crawlers get a response well within their 3-second timeout.
  */
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ certNumber: string }> },
 ) {
   const { certNumber } = await params;
-  const normalized = decodeURIComponent(certNumber).trim();
-
-  const input = await getCertificateRenderInputFromDb(normalized);
-  if (!input) {
-    // Return a plain 404 — no body — so crawlers don't cache an error page as the image.
-    return new NextResponse(null, { status: 404 });
-  }
+  const normalized = decodeURIComponent(certNumber).trim().toUpperCase();
+  if (!normalized) return new NextResponse(null, { status: 400 });
 
   try {
+    // Fast path: read stored PNG from DB.
+    const [row] = await db
+      .select({ pngData: certificates.pngData })
+      .from(certificates)
+      .where(eq(certificates.certificateNumber, normalized))
+      .limit(1);
+
+    if (row?.pngData) {
+      const buffer = Buffer.from(row.pngData, "base64");
+      return new NextResponse(buffer as unknown as BodyInit, { headers: PNG_HEADERS });
+    }
+
+    // Fallback: live render (old certificates without stored PNG).
+    const input = await getCertificateRenderInputFromDb(normalized);
+    if (!input) return new NextResponse(null, { status: 404 });
+
     const buffer = await renderCertificatePng(input);
 
-    return new NextResponse(buffer as unknown as BodyInit, {
-      headers: {
-        "Content-Type": "image/png",
-        "Content-Disposition": `inline; filename="${input.certificateNumber}.png"`,
-        // Long CDN cache: after first hit Vercel/Railway edge serves from cache instantly.
-        "Cache-Control": "public, s-maxage=2592000, max-age=86400, stale-while-revalidate=86400, immutable",
-        // Allow WhatsApp, LinkedIn, Facebook crawlers.
-        "Access-Control-Allow-Origin": "*",
-        // Force non-buffered streaming so the response starts immediately.
-        "X-Content-Type-Options": "nosniff",
-      },
-    });
+    // Store for future requests so next crawl is fast.
+    void db
+      .update(certificates)
+      .set({ pngData: buffer.toString("base64") })
+      .where(eq(certificates.certificateNumber, normalized))
+      .catch(() => {});
+
+    return new NextResponse(buffer as unknown as BodyInit, { headers: PNG_HEADERS });
   } catch (e) {
-    return new NextResponse(null, {
-      status: 500,
-      headers: { "X-Error": e instanceof Error ? e.message : "Render failed" },
-    });
+    console.error("[og/certificate]", e);
+    return new NextResponse(null, { status: 500 });
   }
 }
